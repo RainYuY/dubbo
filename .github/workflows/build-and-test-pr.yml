@@ -274,8 +274,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-samples'
-          ref: master
+          repository: 'Stellar1999/dubbo-samples'
+          ref: FIX_Apollo_UPDATE_JDK17
       - name: "Prepare test list"
         run: bash ./test/scripts/prepare-test.sh
       - name: "Upload test list"
@@ -298,8 +298,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-samples'
-          ref: master
+          repository: 'Stellar1999/dubbo-samples'
+          ref: FIX_Apollo_UPDATE_JDK17
       - name: "Set current date as env variable"
         run: echo "TODAY=$(date +'%Y%m%d')" >> $GITHUB_ENV
       - name: "Restore local maven repository cache"
@@ -359,8 +359,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-samples'
-          ref: master
+          repository: 'Stellar1999/dubbo-samples'
+          ref: FIX_Apollo_UPDATE_JDK17
       - name: "Download test result"
         uses: actions/download-artifact@v4
         with:
@@ -479,7 +479,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-samples'
+          repository: 'Stellar1999/dubbo-samples'
           path: "./dubbo-samples"
       - name: "Set up JDK 21"
         uses: actions/setup-java@v4
@@ -649,8 +649,8 @@ jobs:
       - name: "Checkout dubbo-samples repository"
         uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-samples'
-          ref: master
+          repository: 'Stellar1999/dubbo-samples'
+          ref: FIX_Apollo_UPDATE_JDK17
           path: "./dubbo-samples"
       - name: "Compile and run Dubbo native image demo"
         run: |
