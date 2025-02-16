@@ -326,8 +326,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-integration-cases'
-          ref: main
+          repository: 'Stellar1999/dubbo-integration-cases'
+          ref: log-conflict
       - name: "Prepare test list"
         run: |
           bash ./test/scripts/prepare-test.sh
@@ -352,8 +352,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-integration-cases'
-          ref: main
+          repository: 'Stellar1999/dubbo-integration-cases'
+          ref: log-conflict
       - name: "Cache local Maven repository"
         uses: actions/cache@v3
         with:
@@ -407,8 +407,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-integration-cases'
-          ref: main
+          repository: 'Stellar1999/dubbo-integration-cases'
+          ref: log-conflict
       - name: "Download test result"
         uses: actions/download-artifact@v4
         with:

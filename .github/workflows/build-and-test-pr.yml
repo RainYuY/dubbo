@@ -377,8 +377,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-integration-cases'
-          ref: main
+          repository: 'Stellar1999/dubbo-integration-cases'
+          ref: log-conflict
       - name: "Prepare test list"
         run: bash ./test/scripts/prepare-test.sh
       - name: "Upload test list"
@@ -401,8 +401,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-integration-cases'
-          ref: main
+          repository: 'Stellar1999/dubbo-integration-cases'
+          ref: log-conflict
       - name: "Set current date as env variable"
         run: echo "TODAY=$(date +'%Y%m%d')" >> $GITHUB_ENV
       - name: "Restore local maven repository cache"
@@ -462,8 +462,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: 'apache/dubbo-integration-cases'
-          ref: main
+          repository: 'Stellar1999/dubbo-integration-cases'
+          ref: log-conflict
       - name: "Download test result"
         uses: actions/download-artifact@v4
         with:
