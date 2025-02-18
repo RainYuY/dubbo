@@ -19,6 +19,7 @@ package org.apache.dubbo.rpc.protocol.tri.h12;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.constants.LoggerCodeConstants;
+import org.apache.dubbo.common.extension.ExtensionLoader;
 import org.apache.dubbo.common.logger.FluentLogger;
 import org.apache.dubbo.common.threadpool.manager.ExecutorRepository;
 import org.apache.dubbo.common.threadpool.serial.SerializingExecutor;
@@ -279,6 +280,13 @@ public abstract class AbstractServerTransportListener<HEADER extends RequestMeta
         // customizer RpcInvocation
         HeaderFilter[] headerFilters =
                 UrlUtils.computeServiceAttribute(invoker.getUrl(), HEADER_FILTERS_CACHE, this::loadHeaderFilters);
+        if (headerFilters == null) {
+            ExtensionLoader<HeaderFilter> headerFilterExtensionLoader =
+                    frameworkModel.getExtensionLoader(HeaderFilter.class);
+            headerFilters = headerFilterExtensionLoader
+                    .getActivateExtension(invoker.getUrl(), HEADER_FILTERS_CACHE)
+                    .toArray(new HeaderFilter[0]);
+        }
         for (HeaderFilter headerFilter : headerFilters) {
             headerFilter.invoke(invoker, inv);
         }
