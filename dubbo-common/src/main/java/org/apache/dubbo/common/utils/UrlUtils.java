@@ -693,10 +693,9 @@ public class UrlUtils {
 
     @SuppressWarnings("unchecked")
     public static <T> T computeServiceAttribute(URL url, String key, Function<URL, T> fn) {
-        Optional<Map<String, Object>> attributeMap = Optional.ofNullable(url.getServiceModel())
+        return Optional.ofNullable(url.getServiceModel())
                 .map(ServiceModel::getServiceMetadata)
-                .map(ServiceMetadata::getAttributeMap);
-        return attributeMap
+                .map(ServiceMetadata::getAttributeMap)
                 .map(stringObjectMap -> (T) stringObjectMap.computeIfAbsent(key, k -> fn.apply(url)))
                 .orElse(null);
     }
