@@ -81,6 +81,22 @@ public final class HttpUtils {
         return cookies;
     }
 
+    public static String getCharsetFromContentType(String contentType) {
+        String charset = null;
+        if (contentType == null) {
+            charset = StringUtils.EMPTY_STRING;
+        } else {
+            int index = contentType.lastIndexOf(CHARSET_PREFIX);
+            if (index == -1) {
+                charset = StringUtils.EMPTY_STRING;
+            } else {
+                charset = contentType.substring(index + CHARSET_PREFIX.length()).trim();
+                charset = charset.split(";")[0];
+            }
+        }
+        return charset;
+    }
+
     public static String encodeCookie(HttpCookie cookie) {
         DefaultCookie c = new DefaultCookie(cookie.name(), cookie.value());
         c.setPath(cookie.path());
