@@ -552,7 +552,11 @@ public final class NetUtils {
                     if (addressOp.isPresent()) {
                         try {
                             if (addressOp.get().isReachable(100)) {
-                                return networkInterface;
+                                if (addressOp.get().isSiteLocalAddress()) {
+                                    return networkInterface;
+                                } else {
+                                    result = networkInterface;
+                                }
                             }
                         } catch (IOException e) {
                             // ignore
