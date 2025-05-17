@@ -202,7 +202,7 @@ public abstract class AbstractServerHttpChannelObserver<H extends HttpChannel> i
         if (data instanceof HttpResult) {
             data = ((HttpResult<?>) data).getBody();
         }
-        if (data == null && statusCode != 200) {
+        if (data == null) {
             return null;
         }
 
