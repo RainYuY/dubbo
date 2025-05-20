@@ -645,6 +645,7 @@
       <modules>
         <module>dubbo-spring-boot-project/dubbo-spring-boot-3-autoconfigure</module>
         <module>dubbo-plugin/dubbo-plugin-loom</module>
+        <module>dubbo-plugin/dubbo-mcp</module>
         <module>dubbo-distribution/dubbo-all</module>
         <module>dubbo-distribution/dubbo-all-shaded</module>
         <module>dubbo-distribution/dubbo-apache-release</module>
@@ -951,6 +952,15 @@
       <properties>
         <spotless.skip>true</spotless.skip>
       </properties>
+    </profile>
+    <profile>
+      <id>mcp</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <modules>
+        <module>dubbo-plugin/dubbo-mcp</module>
+      </modules>
     </profile>
     <profile>
       <id>loom</id>
