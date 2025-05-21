@@ -19,5 +19,11 @@ package org.apache.dubbo.mcp.server;
 public interface McpConstant {
 
     String SETTINGS_MCP_PREFIX = "dubbo.protocol.triple.rest.mcp";
-    String SETTINGS_MCP_ENABLE = "dubbo.protocol.triple.rest.mcp.enable";
+    String SETTINGS_MCP_ENABLE = "dubbo.protocol.triple.rest.mcp.enabled";
+    String SETTINGS_MCP_PORT = "dubbo.protocol.triple.rest.mcp.port";
+    String SETTINGS_MCP_PATHS_SSE = "dubbo.protocol.triple.rest.mcp.path.sse";
+    String SETTINGS_MCP_PATHS_MESSAGE = "dubbo.protocol.triple.rest.mcp.path.message";
+
+    String MCP_SERVICE_PROTOCOL = "mcp-service-protocol";
+    String MCP_SERVICE_PORT = "mcp-service-port";
 }

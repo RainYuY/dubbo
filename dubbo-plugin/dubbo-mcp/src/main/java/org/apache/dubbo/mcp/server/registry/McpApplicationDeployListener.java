@@ -23,10 +23,14 @@ import org.apache.dubbo.common.deploy.ApplicationDeployListener;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.FrameworkExecutorRepository;
+import org.apache.dubbo.common.utils.CollectionUtils;
+import org.apache.dubbo.common.utils.NetUtils;
+import org.apache.dubbo.config.ProtocolConfig;
 import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.bootstrap.builders.InternalServiceConfigBuilder;
-import org.apache.dubbo.mcp.server.MCPSseService;
-import org.apache.dubbo.mcp.server.McpService;
+import org.apache.dubbo.mcp.server.McpConstant;
+import org.apache.dubbo.mcp.server.McpSseService;
+import org.apache.dubbo.mcp.server.McpSseServiceImpl;
 import org.apache.dubbo.mcp.server.generic.DubboMcpGenericCaller;
 import org.apache.dubbo.mcp.server.transport.DubboMcpSseTransportProvider;
 import org.apache.dubbo.rpc.model.ApplicationModel;
@@ -50,7 +54,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     private DubboServiceToolRegistry toolRegistry;
     private boolean mcpEnable = true;
 
-    private volatile ServiceConfig<McpService> serviceConfig;
+    private volatile ServiceConfig<McpSseService> serviceConfig;
 
     private static DubboMcpSseTransportProvider dubboMcpSseTransportProvider;
 
@@ -67,7 +71,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     @Override
     public void onStarted(ApplicationModel applicationModel) {
         Configuration globalConf = ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
-        //        mcpEnable = globalConf.getBoolean(McpConstant.SETTINGS_MCP_ENABLE, true);
+        mcpEnable = globalConf.getBoolean(McpConstant.SETTINGS_MCP_ENABLE, true);
         if (mcpEnable) {
             logger.debug("McpApplicationDeployListener: MCP service is enabled.");
         } else {
@@ -121,14 +125,18 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     }
 
     @Override
-    public void onStopped(ApplicationModel applicationModel) {}
+    public void onStopped(ApplicationModel applicationModel) {
+        if (mcpEnable && dubboMcpSseTransportProvider != null) {
+            // TODO: close the mcp server
+        }
+    }
 
     @Override
     public void onFailure(ApplicationModel applicationModel, Throwable cause) {}
 
     private void exportMcpService(ApplicationModel applicationModel) {
-
-        MCPSseService mcpSseService = applicationModel.getBeanFactory().getOrRegisterBean(MCPSseService.class);
+        McpSseServiceImpl mcpSseServiceImpl =
+                applicationModel.getBeanFactory().getOrRegisterBean(McpSseServiceImpl.class);
 
         ExecutorService internalServiceExecutor = applicationModel
                 .getFrameworkModel()
@@ -136,16 +144,40 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                 .getBean(FrameworkExecutorRepository.class)
                 .getInternalServiceExecutor();
 
-        this.serviceConfig = InternalServiceConfigBuilder.<McpService>newBuilder(applicationModel)
-                .interfaceClass(McpService.class)
-                .protocol(CommonConstants.TRIPLE, "mcp-service-protocol")
-                .port(50034, "mcp-service-port")
+        this.serviceConfig = InternalServiceConfigBuilder.<McpSseService>newBuilder(applicationModel)
+                .interfaceClass(McpSseService.class)
+                .protocol(CommonConstants.TRIPLE, McpConstant.MCP_SERVICE_PROTOCOL)
+                .port(getRegisterPort(), McpConstant.MCP_SERVICE_PORT)
                 .registryId("internal-mcp-registry")
                 .executor(internalServiceExecutor)
-                .ref(mcpSseService)
+                .ref(mcpSseServiceImpl)
                 .version(V1)
                 .build();
         serviceConfig.export();
         logger.info("The MCP service exports urls : " + serviceConfig.getExportedUrls());
+    }
+
+    /**
+     * Get the Mcp service register port.
+     * First, try to get config from user configuration, if not found, get from protocol config.
+     * Second, try to get config from protocol config, if not found, get a random available port.
+     */
+    private int getRegisterPort() {
+        Configuration globalConf = ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
+        int mcpPort = globalConf.getInt(McpConstant.SETTINGS_MCP_PORT, -1);
+        if (mcpPort != -1) {
+            return mcpPort;
+        }
+        ApplicationModel applicationModel = ApplicationModel.defaultModel();
+        Collection<ProtocolConfig> protocolConfigs =
+                applicationModel.getApplicationConfigManager().getProtocols();
+        if (CollectionUtils.isNotEmpty(protocolConfigs)) {
+            for (ProtocolConfig protocolConfig : protocolConfigs) {
+                if (CommonConstants.TRIPLE.equals(protocolConfig.getName())) {
+                    return protocolConfig.getPort();
+                }
+            }
+        }
+        return NetUtils.getAvailablePort();
     }
 }

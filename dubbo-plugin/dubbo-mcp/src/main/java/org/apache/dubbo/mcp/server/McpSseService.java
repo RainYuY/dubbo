@@ -16,17 +16,20 @@
  */
 package org.apache.dubbo.mcp.server;
 
-import java.io.Serializable;
+import org.apache.dubbo.common.stream.StreamObserver;
+import org.apache.dubbo.remoting.http12.HttpMethods;
+import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
+import org.apache.dubbo.remoting.http12.rest.Mapping;
 
-public class McpConfig implements Serializable {
+import static org.apache.dubbo.mcp.server.McpConstant.SETTINGS_MCP_PATHS_MESSAGE;
+import static org.apache.dubbo.mcp.server.McpConstant.SETTINGS_MCP_PATHS_SSE;
 
-    private Boolean enabled;
+@Mapping("")
+public interface McpSseService {
 
-    public Boolean getEnabled() {
-        return enabled;
-    }
+    @Mapping(value = "//${" + SETTINGS_MCP_PATHS_SSE + ":/mcp/sse}", method = HttpMethods.GET)
+    void get(StreamObserver<ServerSentEvent<String>> responseObserver);
 
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
+    @Mapping(value = "//${" + SETTINGS_MCP_PATHS_MESSAGE + ":/mcp/message}", method = HttpMethods.POST)
+    void post();
 }

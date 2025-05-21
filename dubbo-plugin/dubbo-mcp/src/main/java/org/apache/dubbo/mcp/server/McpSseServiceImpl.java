@@ -22,7 +22,7 @@ import org.apache.dubbo.mcp.server.registry.McpApplicationDeployListener;
 import org.apache.dubbo.mcp.server.transport.DubboMcpSseTransportProvider;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 
-public class MCPSseService implements McpService, Disposable {
+public class McpSseServiceImpl implements McpSseService, Disposable {
 
     private DubboMcpSseTransportProvider transportProvider = getTransportProvider();
 
