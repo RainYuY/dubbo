@@ -17,7 +17,8 @@
 package org.apache.dubbo.mcp.server.registry;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.constants.LoggerCodeConstants;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.mcp.server.generic.DubboMcpGenericCaller;
 import org.apache.dubbo.rpc.model.ProviderModel;
@@ -41,7 +42,8 @@ import reactor.core.publisher.Mono;
 
 public class DubboServiceToolRegistry {
 
-    private static final Logger logger = LoggerFactory.getLogger(DubboServiceToolRegistry.class);
+    private static final ErrorTypeAwareLogger logger =
+            LoggerFactory.getErrorTypeAwareLogger(DubboServiceToolRegistry.class);
 
     private final McpAsyncServer mcpServer;
     private final DubboOpenApiToolConverter toolConverter;
@@ -88,7 +90,12 @@ public class DubboServiceToolRegistry {
                 try {
                     Operation operation = toolConverter.getOperationByToolName(toolId);
                     if (operation == null) {
-                        logger.error("Could not find Operation metadata for tool: {}. Skipping registration.", tool);
+                        logger.error(
+                                LoggerCodeConstants.INTERNAL_ERROR,
+                                "",
+                                "",
+                                "Could not find Operation metadata for tool: {}. Skipping registration.",
+                                tool);
                         continue;
                     }
                     McpServerFeatures.AsyncToolSpecification toolSpec = createToolSpecification(tool, operation, url);
@@ -96,12 +103,18 @@ public class DubboServiceToolRegistry {
                     registeredTools.put(toolId, toolSpec);
                     logger.info("Registered MCP tool: " + toolId);
                 } catch (Exception e) {
-                    logger.error("Failed to register MCP tool: " + toolId, e);
+                    logger.error(
+                            LoggerCodeConstants.INTERNAL_ERROR, "", "", "Failed to register MCP tool: " + toolId, e);
                 }
             }
 
         } catch (Exception e) {
-            logger.error("Failed to register service as MCP tools: " + serviceDescriptor.getInterfaceName(), e);
+            logger.error(
+                    LoggerCodeConstants.INTERNAL_ERROR,
+                    "",
+                    "",
+                    "Failed to register service as MCP tools: " + serviceDescriptor.getInterfaceName(),
+                    e);
         }
     }
 
@@ -146,11 +159,12 @@ public class DubboServiceToolRegistry {
                         return Mono.just(new McpSchema.CallToolResult(resultJson, true));
                     } catch (Exception e) {
                         logger.error(
-                                "Error executing tool {} (interface: {}, method: {}): {}",
-                                mcpApiTool.name(),
-                                interfaceName,
-                                methodName,
-                                e.getMessage(),
+                                LoggerCodeConstants.INTERNAL_ERROR,
+                                "",
+                                "",
+                                String.format(
+                                        "Error executing tool %s (interface: %s, method: %s): %s",
+                                        mcpApiTool.name(), interfaceName, methodName, e.getMessage()),
                                 e);
                         return Mono.just(
                                 new McpSchema.CallToolResult("Tool execution failed: " + e.getMessage(), false));
@@ -165,7 +179,7 @@ public class DubboServiceToolRegistry {
                 mcpServer.removeTool(toolId).block();
                 logger.info("Unregistered MCP tool: " + toolId);
             } catch (Exception e) {
-                logger.error("Failed to unregister MCP tool: " + toolId, e);
+                logger.error(LoggerCodeConstants.INTERNAL_ERROR, "", "", "Failed to unregister MCP tool: " + toolId, e);
             }
         }
         registeredTools.clear();

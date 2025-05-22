@@ -17,7 +17,8 @@
 package org.apache.dubbo.mcp.server.registry;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.constants.LoggerCodeConstants;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.PojoUtils;
 import org.apache.dubbo.remoting.http12.HttpMethods;
@@ -42,7 +43,8 @@ import io.modelcontextprotocol.spec.McpSchema;
 
 public class DubboOpenApiToolConverter {
 
-    private static final Logger logger = LoggerFactory.getLogger(DubboOpenApiToolConverter.class);
+    private static final ErrorTypeAwareLogger logger =
+            LoggerFactory.getErrorTypeAwareLogger(DubboOpenApiToolConverter.class);
     private final DefaultOpenAPIService openApiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, Operation> opCache = new ConcurrentHashMap<>();
@@ -126,7 +128,12 @@ public class DubboOpenApiToolConverter {
         try {
             schemaJson = objectMapper.writeValueAsString(paramsSchemaMap);
         } catch (Exception e) {
-            logger.error("Failed to serialize parameter schema for tool {}: {}", opId, e.getMessage(), e);
+            logger.error(
+                    LoggerCodeConstants.INTERNAL_ERROR,
+                    "Failed to serialize parameter schema for tool {}: {}",
+                    opId,
+                    e.getMessage(),
+                    e);
             schemaJson = "{\"type\":\"object\",\"properties\":{}}";
         }
         return new McpSchema.Tool(opId, desc, schemaJson);

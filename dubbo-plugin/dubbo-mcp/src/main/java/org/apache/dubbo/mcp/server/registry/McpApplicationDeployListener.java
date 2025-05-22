@@ -19,8 +19,9 @@ package org.apache.dubbo.mcp.server.registry;
 import org.apache.dubbo.common.config.Configuration;
 import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.constants.CommonConstants;
+import org.apache.dubbo.common.constants.LoggerCodeConstants;
 import org.apache.dubbo.common.deploy.ApplicationDeployListener;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.FrameworkExecutorRepository;
 import org.apache.dubbo.common.utils.CollectionUtils;
@@ -50,7 +51,8 @@ import static org.apache.dubbo.metadata.util.MetadataServiceVersionUtils.V1;
 
 public class McpApplicationDeployListener implements ApplicationDeployListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(McpApplicationDeployListener.class);
+    private static final ErrorTypeAwareLogger logger =
+            LoggerFactory.getErrorTypeAwareLogger(McpApplicationDeployListener.class);
     private DubboServiceToolRegistry toolRegistry;
     private boolean mcpEnable = true;
 
@@ -112,7 +114,12 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             logger.info("MCP service initialization complete. Registered " + toolRegistry.getRegisteredToolCount()
                     + " tools.");
         } catch (Exception e) {
-            logger.error("MCP service initialization failed: " + e.getMessage(), e);
+            logger.error(
+                    LoggerCodeConstants.MCP_FAILED_START_SERVER,
+                    "",
+                    "",
+                    "MCP service initialization failed: " + e.getMessage(),
+                    e);
         }
     }
 
