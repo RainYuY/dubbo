@@ -16,7 +16,7 @@
  */
 package org.apache.dubbo.mcp.server.generic;
 
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.config.ApplicationConfig;
 import org.apache.dubbo.config.ReferenceConfig;
@@ -27,9 +27,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION;
+
 public class DubboMcpGenericCaller {
 
-    private static final Logger logger = LoggerFactory.getLogger(DubboMcpGenericCaller.class);
+    private static final ErrorTypeAwareLogger logger =
+            LoggerFactory.getErrorTypeAwareLogger(DubboMcpGenericCaller.class);
 
     private final ApplicationConfig applicationConfig;
 
@@ -37,14 +40,16 @@ public class DubboMcpGenericCaller {
 
     public DubboMcpGenericCaller(ApplicationModel applicationModel) {
         if (applicationModel == null) {
-            logger.error("ApplicationModel cannot be null for DubboMcpGenericCaller.");
+            logger.error(
+                    COMMON_UNEXPECTED_EXCEPTION, "", "", "ApplicationModel cannot be null for DubboMcpGenericCaller.");
             throw new IllegalArgumentException("ApplicationModel cannot be null.");
         }
         this.applicationConfig = applicationModel.getCurrentConfig();
         if (this.applicationConfig == null) {
+
             String errMsg = "ApplicationConfig is null in the provided ApplicationModel. Application Name: "
                     + (applicationModel.getApplicationName() != null ? applicationModel.getApplicationName() : "N/A");
-            logger.error(errMsg);
+            logger.error(COMMON_UNEXPECTED_EXCEPTION, "", "", errMsg);
             throw new IllegalStateException(errMsg);
         }
     }
@@ -88,12 +93,12 @@ public class DubboMcpGenericCaller {
                 } else {
                     String errorMessage = "Failed to obtain GenericService instance for " + interfaceName
                             + (group != null ? " group " + group : "") + (version != null ? " version " + version : "");
-                    logger.error(errorMessage);
+                    logger.error(COMMON_UNEXPECTED_EXCEPTION, "", "", errorMessage);
                     throw new IllegalStateException(errorMessage);
                 }
             } catch (Exception e) {
                 String errorMessage = "Error obtaining GenericService for " + interfaceName + ": " + e.getMessage();
-                logger.error(errorMessage, e);
+                logger.error(COMMON_UNEXPECTED_EXCEPTION, "", "", errorMessage, e);
                 throw new RuntimeException(errorMessage, e);
             }
         }
@@ -111,10 +116,11 @@ public class DubboMcpGenericCaller {
             } else {
                 invokeArgs[i] = null;
                 logger.warn(
-                        "Parameter '{}' not found in MCP provided parameters for method '{}' of interface '{}'. Will use null.",
-                        paramName,
-                        methodName,
-                        interfaceName);
+                        COMMON_UNEXPECTED_EXCEPTION,
+                        "",
+                        "",
+                        "Parameter '" + paramName + "' not found in MCP provided parameters for method '" + methodName
+                                + "' of interface '" + interfaceName + "'. Will use null.");
             }
         }
 
@@ -133,7 +139,7 @@ public class DubboMcpGenericCaller {
         } catch (Exception e) {
             String errorMessage = "GenericService $invoke failed for method '" + methodName + "' on interface '"
                     + interfaceName + "': " + e.getMessage();
-            logger.error(errorMessage, e);
+            logger.error(COMMON_UNEXPECTED_EXCEPTION, "", "", errorMessage, e);
             throw new RuntimeException(errorMessage, e);
         }
     }

@@ -72,7 +72,7 @@ public class DubboOpenApiToolConverter {
         }
 
         if (openApiDef == null || openApiDef.getPaths() == null) {
-            logger.warn("OpenAPI definition or paths are null for service: {}. No tools will be converted.", intfName);
+            logger.info("OpenAPI definition or paths are null for service: {}. No tools will be converted.", intfName);
             return new HashMap<>();
         }
 
@@ -86,7 +86,7 @@ public class DubboOpenApiToolConverter {
                     HttpMethods httpMethod = opEntry.getKey();
                     Operation op = opEntry.getValue();
                     if (op == null || op.getOperationId() == null) {
-                        logger.warn("Skipping operation without ID for path {} and HTTP method {}", path, httpMethod);
+                        logger.info("Skipping operation without ID for path {} and HTTP method {}", path, httpMethod);
                         continue;
                     }
                     String opId = op.getOperationId();
@@ -129,7 +129,7 @@ public class DubboOpenApiToolConverter {
             schemaJson = objectMapper.writeValueAsString(paramsSchemaMap);
         } catch (Exception e) {
             logger.error(
-                    LoggerCodeConstants.INTERNAL_ERROR,
+                    LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                     "Failed to serialize parameter schema for tool {}: {}",
                     opId,
                     e.getMessage(),
@@ -208,24 +208,32 @@ public class DubboOpenApiToolConverter {
                                         bodySchema.getType());
                             } else {
                                 logger.warn(
-                                        "Operation '{}': Could not get a meaningful name for request body param from MethodMeta (name was '{}'). Using default '{}'. Ensure '-parameters' compiler flag.",
-                                        op.getOperationId(),
-                                        actualParamName,
-                                        inferredBodyParamName);
+                                        LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                                        "",
+                                        "",
+                                        "Operation '" + op.getOperationId()
+                                                + "': Could not get a meaningful name for request body param from MethodMeta (name was '"
+                                                + op.getOperationId() + "'). Using default '" + inferredBodyParamName
+                                                + "'. Ensure '-parameters' compiler flag.");
                             }
                         } else {
                             logger.warn(
-                                    "Operation '{}': Could not identify a specific method parameter for the request body via MethodMeta. Using default name '{}' for schema type '{}'.",
-                                    op.getOperationId(),
-                                    inferredBodyParamName,
-                                    bodySchema.getType());
+                                    LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                                    "",
+                                    "",
+                                    "Operation '" + op.getOperationId()
+                                            + "': Could not identify a specific method parameter for the request body via MethodMeta. Using default name '"
+                                            + inferredBodyParamName + " ' for schema type '" + bodySchema.getType()
+                                            + "'");
                         }
                     } else {
                         logger.warn(
-                                "Operation '{}': MethodMeta not available for request body parameter name inference. Using default name '{}' for schema type '{}'.",
-                                op.getOperationId(),
-                                inferredBodyParamName,
-                                bodySchema.getType());
+                                LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                                "",
+                                "",
+                                "Operation '" + op.getOperationId()
+                                        + "': MethodMeta not available for request body parameter name inference. Using default name '"
+                                        + inferredBodyParamName + "' for schema type '" + bodySchema.getType() + "'.");
                     }
                     props.put(inferredBodyParamName, convertOpenApiSchemaToMcpMap(bodySchema, inferredBodyParamName));
                     logger.debug(
@@ -235,7 +243,7 @@ public class DubboOpenApiToolConverter {
                             inferredBodyParamName);
 
                 } else {
-                    logger.warn("Operation '{}': Request body media type has no schema defined.", op.getOperationId());
+                    logger.info("Operation '{}': Request body media type has no schema defined.", op.getOperationId());
                 }
             });
         }

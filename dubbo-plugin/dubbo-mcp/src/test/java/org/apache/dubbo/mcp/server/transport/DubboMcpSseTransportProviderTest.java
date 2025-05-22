@@ -17,26 +17,141 @@
 package org.apache.dubbo.mcp.server.transport;
 
 import org.apache.dubbo.common.stream.StreamObserver;
+import org.apache.dubbo.remoting.http12.HttpMethods;
+import org.apache.dubbo.remoting.http12.HttpRequest;
+import org.apache.dubbo.remoting.http12.HttpResponse;
+import org.apache.dubbo.remoting.http12.HttpStatus;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
+import org.apache.dubbo.rpc.RpcContext;
+import org.apache.dubbo.rpc.RpcServiceContext;
 
+import java.io.ByteArrayInputStream;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.spec.McpError;
+import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.spec.McpServerSession;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class DubboMcpSseTransportProviderTest {
 
+    @Mock
+    private StreamObserver<ServerSentEvent<String>> responseObserver;
+
+    @Mock
+    private HttpRequest httpRequest;
+
+    @Mock
+    private HttpResponse httpResponse;
+
+    @Mock
+    private McpServerSession.Factory sessionFactory;
+
+    @Mock
+    private RpcServiceContext rpcServiceContext;
+
+    @Mock
+    private McpServerSession mockSession;
+
+    private MockedStatic<RpcContext> rpcContextMockedStatic;
+
+    @InjectMocks
     private DubboMcpSseTransportProvider transportProvider;
 
-    StreamObserver<ServerSentEvent<String>> mockConnection;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    //
-    //    @BeforeEach
-    //    public void setup(){
-    //        transportProvider = new DubboMcpSseTransportProvider(new ObjectMapper());
-    //        mockConnection = mock(StreamObserver.class);
-    //        DefaultHttpRequest request = new DefaultHttpRequest(new Http1RequestMetadata(null,
-    // HttpMethods.GET.name(),"/mcp/sse" ), null);
-    //        RpcContext.getServiceContext().setRequest(request);
-    //    }
-    //
-    //    @Test
-    //    public void testHandleSSERequest() {
-    //        transportProvider.handleRequest(mockConnection);
-    //    }
+    @BeforeEach
+    void setUp() {
+        rpcContextMockedStatic = mockStatic(RpcContext.class);
+        rpcContextMockedStatic.when(RpcContext::getServiceContext).thenReturn(rpcServiceContext);
+        when(rpcServiceContext.getRequest(HttpRequest.class)).thenReturn(httpRequest);
+        when(rpcServiceContext.getResponse(HttpResponse.class)).thenReturn(httpResponse);
+        transportProvider = new DubboMcpSseTransportProvider(objectMapper);
+        transportProvider.setSessionFactory(sessionFactory);
+    }
+
+    @Test
+    void handleRequestHandlesGetRequest() {
+        when(httpRequest.method()).thenReturn(HttpMethods.GET.name());
+        when(sessionFactory.create(any())).thenReturn(mockSession);
+        when(mockSession.getId()).thenReturn("1");
+
+        transportProvider.handleRequest(responseObserver);
+
+        verify(httpRequest, times(1)).method();
+        verify(responseObserver, times(1)).onNext(any(ServerSentEvent.class));
+    }
+
+    @Test
+    void handleRequestHandlesPostRequest() {
+        when(httpRequest.method()).thenReturn(HttpMethods.GET.name());
+        when(sessionFactory.create(any())).thenReturn(mockSession);
+        when(mockSession.getId()).thenReturn("1");
+        when(httpRequest.parameter("sessionId")).thenReturn("1");
+        when(httpRequest.inputStream())
+                .thenReturn(new ByteArrayInputStream("{\"jsonrpc\":\"2.0\",\"method\":\"test\"}".getBytes()));
+        when(mockSession.handle(any(McpSchema.JSONRPCMessage.class))).thenReturn(mock());
+        transportProvider.handleRequest(responseObserver);
+        when(httpRequest.method()).thenReturn(HttpMethods.POST.name());
+        transportProvider.handleRequest(responseObserver);
+        verify(httpRequest, times(3)).method();
+        verify(httpResponse).setStatus(HttpStatus.OK.getCode());
+    }
+
+    @Test
+    void handleRequestIgnoresUnsupportedMethods() {
+        when(httpRequest.method()).thenReturn(HttpMethods.PUT.name());
+
+        transportProvider.handleRequest(responseObserver);
+
+        verify(httpRequest, times(2)).method();
+        verifyNoInteractions(responseObserver);
+        verifyNoInteractions(httpResponse);
+    }
+
+    @Test
+    void handleMessageReturnsBadRequestWhenSessionIdIsMissing() {
+        when(httpRequest.parameter("sessionId")).thenReturn(null);
+
+        transportProvider.handleMessage();
+
+        verify(httpResponse, times(1)).setStatus(HttpStatus.BAD_REQUEST.getCode());
+        verify(httpResponse, times(1)).setBody(any(McpError.class));
+    }
+
+    @Test
+    void handleMessageReturnsNotFoundForUnknownSessionId() {
+        when(httpRequest.parameter("sessionId")).thenReturn("unknownSessionId");
+
+        transportProvider.handleMessage();
+
+        verify(httpResponse, times(1)).setStatus(HttpStatus.NOT_FOUND.getCode());
+        verify(httpResponse, times(1)).setBody(any(McpError.class));
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (rpcContextMockedStatic != null) {
+            rpcContextMockedStatic.close();
+        }
+    }
 }

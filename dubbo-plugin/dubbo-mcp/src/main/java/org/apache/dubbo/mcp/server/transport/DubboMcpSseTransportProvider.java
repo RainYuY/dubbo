@@ -16,7 +16,8 @@
  */
 package org.apache.dubbo.mcp.server.transport;
 
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.cache.support.expiring.ExpiringMap;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.common.utils.IOUtils;
@@ -29,7 +30,6 @@ import org.apache.dubbo.rpc.RpcContext;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,9 +42,12 @@ import io.netty.util.internal.StringUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION;
+
 public class DubboMcpSseTransportProvider implements McpServerTransportProvider {
 
-    private static final Logger logger = LoggerFactory.getLogger(DubboMcpSseTransportProvider.class);
+    private static final ErrorTypeAwareLogger logger =
+            LoggerFactory.getErrorTypeAwareLogger(DubboMcpSseTransportProvider.class);
 
     /**
      * Event type for JSON-RPC messages sent through the SSE connection.
@@ -60,10 +63,11 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
 
     private final ObjectMapper objectMapper;
 
-    ConcurrentHashMap<String, McpServerSession> sessions = new ConcurrentHashMap<>();
+    private final ExpiringMap<String, McpServerSession> sessions = new ExpiringMap<>(30 * 60, 30);
 
     public DubboMcpSseTransportProvider(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+        sessions.getExpireThread().startExpiryIfNotStarted();
     }
 
     @Override
@@ -79,7 +83,12 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
         return Flux.fromIterable(sessions.values())
                 .flatMap(session -> session.sendNotification(method, params)
                         .doOnError(e -> logger.error(
-                                "Failed to send message to session {}: {}", session.getId(), e.getMessage()))
+                                COMMON_UNEXPECTED_EXCEPTION,
+                                "",
+                                "",
+                                String.format(
+                                        "Failed to send message to session %s: %s", session.getId(), e.getMessage()),
+                                e))
                         .onErrorComplete())
                 .then();
     }
@@ -96,8 +105,7 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         if (HttpMethods.isGet(request.method())) {
             handleSseConnection(responseObserver);
-        }
-        if (HttpMethods.isPost(request.method())) {
+        } else if (HttpMethods.isPost(request.method())) {
             handleMessage();
         }
         return;
@@ -119,6 +127,7 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
             response.setBody(new McpError("Unknown sessionId: " + sessionId));
             return;
         }
+        refreshSessionExpire(session);
         try {
             McpSchema.JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(
                     objectMapper, IOUtils.read(request.inputStream(), String.valueOf(StandardCharsets.UTF_8)));
@@ -141,12 +150,16 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
         sendEvent(responseObserver, ENDPOINT_EVENT_TYPE, "/mcp/message" + "?sessionId=" + mcpServerSession.getId());
     }
 
+    private void refreshSessionExpire(McpServerSession session) {
+        sessions.put(session.getId(), session);
+    }
+
     private void sendEvent(StreamObserver<ServerSentEvent<String>> responseObserver, String eventType, String data) {
         responseObserver.onNext(
                 ServerSentEvent.<String>builder().event(eventType).data(data).build());
     }
 
-    private class DubboMcpSessionTransport implements McpServerTransport {
+    private static class DubboMcpSessionTransport implements McpServerTransport {
 
         private final ObjectMapper JSON;
 
@@ -165,9 +178,7 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
 
         @Override
         public Mono<Void> closeGracefully() {
-            return Mono.fromRunnable(() -> {
-                responseObserver.onCompleted();
-            });
+            return Mono.fromRunnable(responseObserver::onCompleted);
         }
 
         @Override
@@ -180,6 +191,7 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
                             .data(jsonText)
                             .build());
                 } catch (Exception e) {
+                    responseObserver.onError(e);
                 }
             });
         }

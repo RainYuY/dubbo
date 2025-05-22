@@ -115,7 +115,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                     + " tools.");
         } catch (Exception e) {
             logger.error(
-                    LoggerCodeConstants.MCP_FAILED_START_SERVER,
+                    LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                     "",
                     "",
                     "MCP service initialization failed: " + e.getMessage(),

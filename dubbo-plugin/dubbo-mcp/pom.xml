@@ -28,6 +28,7 @@
   <properties>
     <mcp.version>0.9.0</mcp.version>
     <skip_maven_deploy>false</skip_maven_deploy>
+    <guava.version>33.2.1-jre</guava.version>
   </properties>
 
   <dependencies>
@@ -35,6 +36,11 @@
       <groupId>org.apache.dubbo</groupId>
       <artifactId>dubbo-rest-openapi</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.dubbo</groupId>
+      <artifactId>dubbo-filter-cache</artifactId>
+      <version>${revision}</version>
     </dependency>
     <dependency>
       <groupId>io.modelcontextprotocol.sdk</groupId>
@@ -50,6 +56,28 @@
       <groupId>org.apache.dubbo</groupId>
       <artifactId>dubbo-common</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+
+      <!--test-->
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

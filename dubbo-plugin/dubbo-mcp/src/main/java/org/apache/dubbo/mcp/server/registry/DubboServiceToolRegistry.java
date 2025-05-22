@@ -62,7 +62,7 @@ public class DubboServiceToolRegistry {
         List<URL> statedURLs = providerModel.getServiceUrls();
 
         if (statedURLs == null || statedURLs.isEmpty()) {
-            logger.warn("No URLs found for service: " + serviceDescriptor.getInterfaceName());
+            logger.info("No URLs found for service: " + serviceDescriptor.getInterfaceName());
             return;
         }
 
@@ -83,7 +83,7 @@ public class DubboServiceToolRegistry {
 
                 // Check before registration.
                 if (registeredTools.containsKey(toolId)) {
-                    logger.warn("Tool with name '" + toolId + "' 已注册，跳过。");
+                    logger.info("Tool with name '" + toolId + "' has been registered, skip it。");
                     continue;
                 }
 
@@ -91,11 +91,10 @@ public class DubboServiceToolRegistry {
                     Operation operation = toolConverter.getOperationByToolName(toolId);
                     if (operation == null) {
                         logger.error(
-                                LoggerCodeConstants.INTERNAL_ERROR,
+                                LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                                 "",
                                 "",
-                                "Could not find Operation metadata for tool: {}. Skipping registration.",
-                                tool);
+                                "Could not find Operation metadata for tool: " + tool + " . Skipping registration.");
                         continue;
                     }
                     McpServerFeatures.AsyncToolSpecification toolSpec = createToolSpecification(tool, operation, url);
@@ -104,13 +103,17 @@ public class DubboServiceToolRegistry {
                     logger.info("Registered MCP tool: " + toolId);
                 } catch (Exception e) {
                     logger.error(
-                            LoggerCodeConstants.INTERNAL_ERROR, "", "", "Failed to register MCP tool: " + toolId, e);
+                            LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                            "",
+                            "",
+                            "Failed to register MCP tool: " + toolId,
+                            e);
                 }
             }
 
         } catch (Exception e) {
             logger.error(
-                    LoggerCodeConstants.INTERNAL_ERROR,
+                    LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                     "",
                     "",
                     "Failed to register service as MCP tools: " + serviceDescriptor.getInterfaceName(),
@@ -159,7 +162,7 @@ public class DubboServiceToolRegistry {
                         return Mono.just(new McpSchema.CallToolResult(resultJson, true));
                     } catch (Exception e) {
                         logger.error(
-                                LoggerCodeConstants.INTERNAL_ERROR,
+                                LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                                 "",
                                 "",
                                 String.format(
@@ -179,7 +182,12 @@ public class DubboServiceToolRegistry {
                 mcpServer.removeTool(toolId).block();
                 logger.info("Unregistered MCP tool: " + toolId);
             } catch (Exception e) {
-                logger.error(LoggerCodeConstants.INTERNAL_ERROR, "", "", "Failed to unregister MCP tool: " + toolId, e);
+                logger.error(
+                        LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                        "",
+                        "",
+                        "Failed to unregister MCP tool: " + toolId,
+                        e);
             }
         }
         registeredTools.clear();
