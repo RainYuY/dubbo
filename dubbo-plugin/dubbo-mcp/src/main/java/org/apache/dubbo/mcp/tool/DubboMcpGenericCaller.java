@@ -14,8 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.mcp.server.generic;
-
+package org.apache.dubbo.mcp.tool;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.config.ApplicationConfig;
@@ -73,9 +72,6 @@ public class DubboMcpGenericCaller {
             // If no registries are configured, assume local JVM call is intended or possible.
             if (this.applicationConfig.getRegistries() == null
                     || this.applicationConfig.getRegistries().isEmpty()) {
-                logger.info("No registries configured. Setting scope to 'local' for interface: " + interfaceName
-                        + (group != null ? ", group: " + group : "")
-                        + (version != null ? ", version: " + version : ""));
                 reference.setScope("local");
             }
 
@@ -125,17 +121,7 @@ public class DubboMcpGenericCaller {
         }
 
         try {
-            logger.info(
-                    "Executing generic call: interface='{}', method='{}', group='{}', version='{}', paramTypes={}, args={}",
-                    interfaceName,
-                    methodName,
-                    group,
-                    version,
-                    invokeParameterTypes,
-                    invokeArgs);
-            Object result = genericService.$invoke(methodName, invokeParameterTypes, invokeArgs);
-            logger.info("Generic call result: {}", result);
-            return result;
+            return genericService.$invoke(methodName, invokeParameterTypes, invokeArgs);
         } catch (Exception e) {
             String errorMessage = "GenericService $invoke failed for method '" + methodName + "' on interface '"
                     + interfaceName + "': " + e.getMessage();

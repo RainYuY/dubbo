@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.mcp.server.registry;
+package org.apache.dubbo.mcp.core;
 
 import org.apache.dubbo.common.config.Configuration;
 import org.apache.dubbo.common.config.ConfigurationUtils;
@@ -29,11 +29,12 @@ import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.config.ProtocolConfig;
 import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.bootstrap.builders.InternalServiceConfigBuilder;
-import org.apache.dubbo.mcp.server.McpConstant;
-import org.apache.dubbo.mcp.server.McpSseService;
-import org.apache.dubbo.mcp.server.McpSseServiceImpl;
-import org.apache.dubbo.mcp.server.generic.DubboMcpGenericCaller;
-import org.apache.dubbo.mcp.server.transport.DubboMcpSseTransportProvider;
+
+import org.apache.dubbo.mcp.McpConstant;
+import org.apache.dubbo.mcp.tool.DubboMcpGenericCaller;
+import org.apache.dubbo.mcp.tool.DubboOpenApiToolConverter;
+import org.apache.dubbo.mcp.tool.DubboServiceToolRegistry;
+import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.model.ProviderModel;
@@ -54,6 +55,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     private static final ErrorTypeAwareLogger logger =
             LoggerFactory.getErrorTypeAwareLogger(McpApplicationDeployListener.class);
     private DubboServiceToolRegistry toolRegistry;
+    private McpServiceFilter mcpServiceFilter;
     private boolean mcpEnable = true;
 
     private volatile ServiceConfig<McpSseService> serviceConfig;
@@ -74,14 +76,15 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     public void onStarted(ApplicationModel applicationModel) {
         Configuration globalConf = ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
         mcpEnable = globalConf.getBoolean(McpConstant.SETTINGS_MCP_ENABLE, true);
-        if (mcpEnable) {
-            logger.debug("McpApplicationDeployListener: MCP service is enabled.");
-        } else {
-            logger.debug("McpApplicationDeployListener: MCP service is disabled. Skipping initialization.");
+        if (!mcpEnable) {
+            logger.info("MCP service is disabled, skipping initialization");
             return;
         }
         try {
-            logger.info("McpApplicationDeployListener: Application started. Initializing MCP server and tools...");
+            logger.info("Initializing MCP server and tools");
+
+            // Initialize service filter
+            mcpServiceFilter = new McpServiceFilter(applicationModel);
 
             dubboMcpSseTransportProvider = new DubboMcpSseTransportProvider(new ObjectMapper());
             McpSchema.ServerCapabilities.ToolCapabilities toolCapabilities =
@@ -104,15 +107,20 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
             Collection<ProviderModel> providerModels =
                     applicationModel.getApplicationServiceRepository().allProviderModels();
-            logger.info("Found " + providerModels.size() + " provider models. Starting tool registration...");
+
+            int registeredCount = 0;
             for (ProviderModel pm : providerModels) {
-                logger.info("Processing ProviderModel: " + pm.getServiceKey() + ", module: "
-                        + pm.getModuleModel().getDesc());
-                toolRegistry.registerService(pm);
+                // Check if service should be exposed as MCP tool
+                if (mcpServiceFilter.shouldExposeAsMcpTool(pm)) {
+                    // Get MCP tool configuration
+                    McpServiceFilter.McpToolConfig toolConfig = mcpServiceFilter.getMcpToolConfig(pm);
+                    toolRegistry.registerService(pm, toolConfig);
+                    registeredCount++;
+                }
             }
+
             exportMcpService(applicationModel);
-            logger.info("MCP service initialization complete. Registered " + toolRegistry.getRegisteredToolCount()
-                    + " tools.");
+            logger.info("MCP server initialized successfully, {} tools registered", registeredCount);
         } catch (Exception e) {
             logger.error(
                     LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
@@ -126,7 +134,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     @Override
     public void onStopping(ApplicationModel applicationModel) {
         if (toolRegistry != null) {
-            logger.info("MCP service stopping. Clearing tool registry...");
+            logger.info("MCP server stopping, clearing tool registry");
             toolRegistry.clearRegistry();
         }
     }
@@ -161,7 +169,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                 .version(V1)
                 .build();
         serviceConfig.export();
-        logger.info("The MCP service exports urls : " + serviceConfig.getExportedUrls());
+        logger.info("MCP service exported on: {}", serviceConfig.getExportedUrls());
     }
 
     /**

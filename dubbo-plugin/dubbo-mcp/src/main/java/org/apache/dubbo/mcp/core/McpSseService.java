@@ -14,15 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.mcp.server;
-
+package org.apache.dubbo.mcp.core;
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.remoting.http12.rest.Mapping;
 
-import static org.apache.dubbo.mcp.server.McpConstant.SETTINGS_MCP_PATHS_MESSAGE;
-import static org.apache.dubbo.mcp.server.McpConstant.SETTINGS_MCP_PATHS_SSE;
+import static org.apache.dubbo.mcp.McpConstant.SETTINGS_MCP_PATHS_MESSAGE;
+import static org.apache.dubbo.mcp.McpConstant.SETTINGS_MCP_PATHS_SSE;
 
 @Mapping("")
 public interface McpSseService {

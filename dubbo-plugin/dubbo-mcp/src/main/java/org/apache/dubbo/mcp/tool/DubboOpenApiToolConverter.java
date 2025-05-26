@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.mcp.server.registry;
+package org.apache.dubbo.mcp.tool;
 
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.constants.LoggerCodeConstants;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.PojoUtils;
+import org.apache.dubbo.mcp.core.McpServiceFilter;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.rest.OpenAPIRequest;
 import org.apache.dubbo.remoting.http12.rest.ParamType;
@@ -54,6 +55,11 @@ public class DubboOpenApiToolConverter {
     }
 
     public Map<String, McpSchema.Tool> convertToTools(ServiceDescriptor svcDesc, URL svcUrl) {
+        return convertToTools(svcDesc, svcUrl, null);
+    }
+
+    public Map<String, McpSchema.Tool> convertToTools(
+            ServiceDescriptor svcDesc, URL svcUrl, McpServiceFilter.McpToolConfig toolConfig) {
         opCache.clear(); // Clear cache for each new service conversion context
 
         OpenAPIRequest req = new OpenAPIRequest();
@@ -61,18 +67,9 @@ public class DubboOpenApiToolConverter {
         req.setService(new String[] {intfName});
 
         OpenAPI openApiDef = openApiService.getOpenAPI(req);
-        System.out.println(openApiDef);
-
-        if (logger.isDebugEnabled()) {
-            try {
-                logger.debug("OpenAPI for {}: {}", intfName, objectMapper.writeValueAsString(openApiDef));
-            } catch (Exception e) {
-                logger.debug("Failed to serialize OpenAPI for {}", intfName, e);
-            }
-        }
 
         if (openApiDef == null || openApiDef.getPaths() == null) {
-            logger.info("OpenAPI definition or paths are null for service: {}. No tools will be converted.", intfName);
+            logger.debug("OpenAPI definition or paths are null for service: {}", intfName);
             return new HashMap<>();
         }
 
@@ -86,18 +83,13 @@ public class DubboOpenApiToolConverter {
                     HttpMethods httpMethod = opEntry.getKey();
                     Operation op = opEntry.getValue();
                     if (op == null || op.getOperationId() == null) {
-                        logger.info("Skipping operation without ID for path {} and HTTP method {}", path, httpMethod);
+                        logger.debug("Skipping operation without ID for path {} and HTTP method {}", path, httpMethod);
                         continue;
                     }
                     String opId = op.getOperationId();
-                    McpSchema.Tool mcpTool = convertOperationToMcpTool(path, httpMethod, op);
+                    McpSchema.Tool mcpTool = convertOperationToMcpTool(path, httpMethod, op, toolConfig);
                     mcpTools.put(opId, mcpTool);
                     opCache.put(opId, op); // Cache the original Operation object
-                    logger.info(
-                            "Converted operation '{}' to MCP tool with name '{}' for service '{}'",
-                            opId,
-                            mcpTool.name(),
-                            intfName);
                 }
             }
         }
@@ -109,18 +101,36 @@ public class DubboOpenApiToolConverter {
     }
 
     private McpSchema.Tool convertOperationToMcpTool(String path, HttpMethods method, Operation op) {
+        return convertOperationToMcpTool(path, method, op, null);
+    }
+
+    private McpSchema.Tool convertOperationToMcpTool(
+            String path, HttpMethods method, Operation op, McpServiceFilter.McpToolConfig toolConfig) {
         String opId = op.getOperationId();
-        String desc = op.getSummary();
-        if (desc == null || desc.isEmpty()) {
-            desc = op.getDescription();
+
+        // Apply tool name configuration
+        String toolName = opId;
+        if (toolConfig != null
+                && toolConfig.getToolName() != null
+                && !toolConfig.getToolName().isEmpty()) {
+            toolName = toolConfig.getToolName() + "_" + opId;
         }
-        if (desc == null || desc.isEmpty()) {
-            desc = "Executes operation '" + opId + "' which corresponds to a " + method.name() + " request on path "
-                    + path + ".";
-            logger.debug(
-                    "Operation '{}': No summary or description found. Generated default tool description: {}",
-                    opId,
-                    desc);
+
+        // Apply tool description configuration
+        String desc = null;
+        if (toolConfig != null
+                && toolConfig.getDescription() != null
+                && !toolConfig.getDescription().isEmpty()) {
+            desc = toolConfig.getDescription();
+        } else {
+            desc = op.getSummary();
+            if (desc == null || desc.isEmpty()) {
+                desc = op.getDescription();
+            }
+            if (desc == null || desc.isEmpty()) {
+                desc = "Executes operation '" + opId + "' which corresponds to a " + method.name() + " request on path "
+                        + path + ".";
+            }
         }
 
         Map<String, Object> paramsSchemaMap = extractParameterSchema(op);
@@ -136,7 +146,7 @@ public class DubboOpenApiToolConverter {
                     e);
             schemaJson = "{\"type\":\"object\",\"properties\":{}}";
         }
-        return new McpSchema.Tool(opId, desc, schemaJson);
+        return new McpSchema.Tool(toolName, desc, schemaJson);
     }
 
     private Map<String, Object> extractParameterSchema(Operation op) {
@@ -151,10 +161,6 @@ public class DubboOpenApiToolConverter {
                     // Pass the parameter name for potentially better default descriptions
                     props.put(
                             apiParam.getName(), convertOpenApiSchemaToMcpMap(apiParam.getSchema(), apiParam.getName()));
-                    logger.debug(
-                            "Operation '{}': Added parameter '{}' from op.getParameters() to MCP tool schema.",
-                            op.getOperationId(),
-                            apiParam.getName());
                 }
             }
         }
@@ -201,11 +207,7 @@ public class DubboOpenApiToolConverter {
                                     && !actualParamName.startsWith("arg")
                                     && !actualParamName.isEmpty()) {
                                 inferredBodyParamName = actualParamName;
-                                logger.info(
-                                        "Operation '{}': Inferred request body parameter name as '{}' from MethodMeta for schema type '{}'.",
-                                        op.getOperationId(),
-                                        inferredBodyParamName,
-                                        bodySchema.getType());
+
                             } else {
                                 logger.warn(
                                         LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
@@ -236,14 +238,6 @@ public class DubboOpenApiToolConverter {
                                         + inferredBodyParamName + "' for schema type '" + bodySchema.getType() + "'.");
                     }
                     props.put(inferredBodyParamName, convertOpenApiSchemaToMcpMap(bodySchema, inferredBodyParamName));
-                    logger.debug(
-                            "Operation '{}': Added request body schema (type '{}') under MCP parameter name '{}'.",
-                            op.getOperationId(),
-                            bodySchema.getType(),
-                            inferredBodyParamName);
-
-                } else {
-                    logger.info("Operation '{}': Request body media type has no schema defined.", op.getOperationId());
                 }
             });
         }
@@ -279,10 +273,6 @@ public class DubboOpenApiToolConverter {
             String defaultParamDesc = getParamDesc(openApiSchema, propertyName);
 
             mcpMap.put("description", defaultParamDesc);
-            logger.trace(
-                    "Schema for '{}': No description. Generated default: {}",
-                    (propertyName != null ? propertyName : "unnamed_schema"),
-                    defaultParamDesc);
         }
 
         if (openApiSchema.getEnumeration() != null

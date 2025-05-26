@@ -14,12 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.mcp.server;
-
+package org.apache.dubbo.mcp.core;
 import org.apache.dubbo.common.resource.Disposable;
 import org.apache.dubbo.common.stream.StreamObserver;
-import org.apache.dubbo.mcp.server.registry.McpApplicationDeployListener;
-import org.apache.dubbo.mcp.server.transport.DubboMcpSseTransportProvider;
+import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 
 public class McpSseServiceImpl implements McpSseService, Disposable {

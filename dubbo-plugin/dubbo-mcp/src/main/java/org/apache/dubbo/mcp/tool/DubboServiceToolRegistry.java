@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.mcp.server.registry;
-
+package org.apache.dubbo.mcp.tool;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.constants.LoggerCodeConstants;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
-import org.apache.dubbo.mcp.server.generic.DubboMcpGenericCaller;
+import org.apache.dubbo.mcp.core.McpServiceFilter;
+import org.apache.dubbo.mcp.tool.DubboMcpGenericCaller;
+import org.apache.dubbo.mcp.tool.DubboOpenApiToolConverter;
 import org.apache.dubbo.rpc.model.ProviderModel;
 import org.apache.dubbo.rpc.model.ServiceDescriptor;
 import org.apache.dubbo.rpc.protocol.tri.rest.mapping.meta.MethodMeta;
@@ -57,22 +58,22 @@ public class DubboServiceToolRegistry {
         this.genericCaller = genericCaller;
     }
 
-    public void registerService(ProviderModel providerModel) {
+    public void registerService(ProviderModel providerModel, McpServiceFilter.McpToolConfig toolConfig) {
         ServiceDescriptor serviceDescriptor = providerModel.getServiceModel();
         List<URL> statedURLs = providerModel.getServiceUrls();
 
         if (statedURLs == null || statedURLs.isEmpty()) {
-            logger.info("No URLs found for service: " + serviceDescriptor.getInterfaceName());
+            logger.debug("No URLs found for service: {}", serviceDescriptor.getInterfaceName());
             return;
         }
 
         try {
             // Use the first URL as the service URL.
             URL url = statedURLs.get(0);
-            Map<String, McpSchema.Tool> tools = toolConverter.convertToTools(serviceDescriptor, url);
+            Map<String, McpSchema.Tool> tools = toolConverter.convertToTools(serviceDescriptor, url, toolConfig);
 
             if (tools.isEmpty()) {
-                logger.info("No tools found for service: " + serviceDescriptor.getInterfaceName());
+                logger.debug("No tools found for service: {}", serviceDescriptor.getInterfaceName());
                 return;
             }
 
@@ -81,9 +82,9 @@ public class DubboServiceToolRegistry {
                 McpSchema.Tool tool = entry.getValue();
                 String toolId = tool.name();
 
-                // Check before registration.
+                // Check if tool already registered
                 if (registeredTools.containsKey(toolId)) {
-                    logger.info("Tool with name '" + toolId + "' has been registered, skip it。");
+                    logger.debug("Tool {} already registered, skipping", toolId);
                     continue;
                 }
 
@@ -94,13 +95,14 @@ public class DubboServiceToolRegistry {
                                 LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                                 "",
                                 "",
-                                "Could not find Operation metadata for tool: " + tool + " . Skipping registration.");
+                                "Could not find Operation metadata for tool: {}. Skipping registration",
+                                tool);
                         continue;
                     }
                     McpServerFeatures.AsyncToolSpecification toolSpec = createToolSpecification(tool, operation, url);
                     mcpServer.addTool(toolSpec).block();
                     registeredTools.put(toolId, toolSpec);
-                    logger.info("Registered MCP tool: " + toolId);
+                    logger.debug("Registered MCP tool: {}", toolId);
                 } catch (Exception e) {
                     logger.error(
                             LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
@@ -180,7 +182,7 @@ public class DubboServiceToolRegistry {
         for (String toolId : registeredTools.keySet()) {
             try {
                 mcpServer.removeTool(toolId).block();
-                logger.info("Unregistered MCP tool: " + toolId);
+                logger.debug("Unregistered MCP tool: {}", toolId);
             } catch (Exception e) {
                 logger.error(
                         LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
@@ -191,9 +193,5 @@ public class DubboServiceToolRegistry {
             }
         }
         registeredTools.clear();
-    }
-
-    public int getRegisteredToolCount() {
-        return registeredTools.size();
     }
 }

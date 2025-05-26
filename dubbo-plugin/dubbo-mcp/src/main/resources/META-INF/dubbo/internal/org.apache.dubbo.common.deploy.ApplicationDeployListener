@@ -1,1 +1,1 @@
-mcpToolRegister=org.apache.dubbo.mcp.server.registry.McpApplicationDeployListener
+mcpToolRegister=org.apache.dubbo.mcp.core.McpApplicationDeployListener
