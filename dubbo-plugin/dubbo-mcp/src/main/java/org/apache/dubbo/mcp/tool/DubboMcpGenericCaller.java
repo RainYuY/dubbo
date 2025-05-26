@@ -68,14 +68,8 @@ public class DubboMcpGenericCaller {
             ReferenceConfig<GenericService> reference = new ReferenceConfig<>();
             reference.setApplication(this.applicationConfig);
             reference.setInterface(interfaceName);
-            reference.setGeneric("true"); // 默认为 "bean" 或 "true" (pojo) 泛化
-
-            // If no registries are configured, assume local JVM call is intended or possible.
-            if (this.applicationConfig.getRegistries() == null
-                    || this.applicationConfig.getRegistries().isEmpty()) {
-                reference.setScope("local");
-            }
-
+            reference.setGeneric("true"); // Defaults to 'bean' or 'true' for POJO generalization.
+            reference.setScope("local");
             if (group != null && !group.isEmpty()) {
                 reference.setGroup(group);
             }

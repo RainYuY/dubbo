@@ -94,8 +94,7 @@ public class DubboServiceToolRegistry {
                                 LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
                                 "",
                                 "",
-                                "Could not find Operation metadata for tool: {}. Skipping registration",
-                                tool);
+                                "Could not find Operation metadata for tool: " + tool + ". Skipping registration");
                         continue;
                     }
                     McpServerFeatures.AsyncToolSpecification toolSpec = createToolSpecification(tool, operation, url);

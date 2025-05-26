@@ -24,14 +24,14 @@ public interface McpConstant {
     String SETTINGS_MCP_PATHS_SSE = "dubbo.protocol.triple.rest.mcp.path.sse";
     String SETTINGS_MCP_PATHS_MESSAGE = "dubbo.protocol.triple.rest.mcp.path.message";
 
-    // MCP 服务控制相关配置
+    // MCP service control-related configuration
     String SETTINGS_MCP_SERVICE_PREFIX = "dubbo.protocol.triple.rest.mcp.service";
     String SETTINGS_MCP_SERVICE_ENABLED_SUFFIX = "enabled";
     String SETTINGS_MCP_SERVICE_NAME_SUFFIX = "tool-name";
     String SETTINGS_MCP_SERVICE_DESCRIPTION_SUFFIX = "description";
     String SETTINGS_MCP_SERVICE_TAGS_SUFFIX = "tags";
 
-    // 全局默认配置
+    // Global default configuration
     String SETTINGS_MCP_DEFAULT_ENABLED = "dubbo.protocol.triple.rest.mcp.default.enabled";
     String SETTINGS_MCP_INCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.include.patterns";
     String SETTINGS_MCP_EXCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.exclude.patterns";

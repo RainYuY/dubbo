@@ -43,7 +43,7 @@ public class McpServiceFilter {
         this.configuration = ConfigurationUtils.getGlobalConfiguration(applicationModel);
         this.defaultEnabled = configuration.getBoolean(McpConstant.SETTINGS_MCP_DEFAULT_ENABLED, true);
 
-        // 解析包含和排除模式
+        // Parse include and exclude patterns
         String includeStr = configuration.getString(McpConstant.SETTINGS_MCP_INCLUDE_PATTERNS, "");
         String excludeStr = configuration.getString(McpConstant.SETTINGS_MCP_EXCLUDE_PATTERNS, "");
 
@@ -63,7 +63,7 @@ public class McpServiceFilter {
     public boolean shouldExposeAsMcpTool(ProviderModel providerModel) {
         String interfaceName = providerModel.getServiceModel().getInterfaceName();
 
-        // 1. Check exclude patterns (highest priority)
+        // 1. Check exclude patterns (the highest priority)
         if (isMatchedByPatterns(interfaceName, excludePatterns)) {
             return false;
         }

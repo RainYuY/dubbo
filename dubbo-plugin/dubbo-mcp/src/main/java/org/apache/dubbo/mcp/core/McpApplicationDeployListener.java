@@ -61,6 +61,8 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     private static DubboMcpSseTransportProvider dubboMcpSseTransportProvider;
 
+    private McpAsyncServer mcpAsyncServer;
+
     @Override
     public void onInitialize(ApplicationModel scopeModel) {}
 
@@ -73,7 +75,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     @Override
     public void onStarted(ApplicationModel applicationModel) {
-        Configuration globalConf = ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
+        Configuration globalConf = ConfigurationUtils.getGlobalConfiguration(applicationModel);
         mcpEnable = globalConf.getBoolean(McpConstant.SETTINGS_MCP_ENABLE, true);
         if (!mcpEnable) {
             logger.info("MCP service is disabled, skipping initialization");
@@ -91,7 +93,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             McpSchema.ServerCapabilities serverCapabilities =
                     new McpSchema.ServerCapabilities(null, null, null, null, toolCapabilities);
 
-            McpAsyncServer mcpAsyncServer = McpServer.async(dubboMcpSseTransportProvider)
+            mcpAsyncServer = McpServer.async(dubboMcpSseTransportProvider)
                     .capabilities(serverCapabilities)
                     .build();
 
@@ -140,8 +142,8 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     @Override
     public void onStopped(ApplicationModel applicationModel) {
-        if (mcpEnable && dubboMcpSseTransportProvider != null) {
-            // TODO: close the mcp server
+        if (mcpEnable && mcpAsyncServer != null) {
+            mcpAsyncServer.close();
         }
     }
 
