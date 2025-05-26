@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 package org.apache.dubbo.mcp.core;
+
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;

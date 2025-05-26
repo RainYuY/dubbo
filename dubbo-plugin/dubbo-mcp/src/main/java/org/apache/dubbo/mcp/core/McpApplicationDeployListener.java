@@ -29,7 +29,6 @@ import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.config.ProtocolConfig;
 import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.bootstrap.builders.InternalServiceConfigBuilder;
-
 import org.apache.dubbo.mcp.McpConstant;
 import org.apache.dubbo.mcp.tool.DubboMcpGenericCaller;
 import org.apache.dubbo.mcp.tool.DubboOpenApiToolConverter;

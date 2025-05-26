@@ -17,7 +17,6 @@
 package org.apache.dubbo.mcp.transport;
 
 import org.apache.dubbo.common.stream.StreamObserver;
-import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;

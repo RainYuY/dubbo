@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 package org.apache.dubbo.mcp.core;
+
 import org.apache.dubbo.common.config.Configuration;
 import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
