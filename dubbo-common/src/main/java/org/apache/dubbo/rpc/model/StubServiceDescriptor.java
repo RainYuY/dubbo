@@ -46,10 +46,11 @@ public class StubServiceDescriptor implements ServiceDescriptor {
     }
 
     public void addMethod(MethodDescriptor methodDescriptor) {
-        methods.put(methodDescriptor.getMethodName(), Collections.singletonList(methodDescriptor));
-        Map<String, MethodDescriptor> descMap =
-                descToMethods.computeIfAbsent(methodDescriptor.getMethodName(), k -> new HashMap<>());
-        descMap.put(methodDescriptor.getParamDesc(), methodDescriptor);
+        List<MethodDescriptor> descriptors = Collections.singletonList(methodDescriptor);
+        methods.put(methodDescriptor.getMethodName(), descriptors);
+        descToMethods
+                .computeIfAbsent(methodDescriptor.getMethodName(), k -> new HashMap<>())
+                .put(methodDescriptor.getParamDesc(), methodDescriptor);
     }
 
     public FullServiceDefinition getFullServiceDefinition(String serviceKey) {

@@ -21,6 +21,9 @@ import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.nested.RestConfig;
 import org.apache.dubbo.remoting.http12.rest.Mapping;
 import org.apache.dubbo.rpc.model.FrameworkModel;
+import org.apache.dubbo.rpc.model.MethodDescriptor;
+import org.apache.dubbo.rpc.model.ReflectionServiceDescriptor;
+import org.apache.dubbo.rpc.model.StubServiceDescriptor;
 import org.apache.dubbo.rpc.protocol.tri.rest.cors.CorsUtils;
 import org.apache.dubbo.rpc.protocol.tri.rest.mapping.RequestMapping;
 import org.apache.dubbo.rpc.protocol.tri.rest.mapping.RequestMapping.Builder;
@@ -96,13 +99,14 @@ public class BasicRequestMappingResolver implements RequestMappingResolver {
         Builder builder = builder(mapping);
 
         String[] paths = resolvePaths(mapping);
+        ServiceMeta serviceMeta = methodMeta.getServiceMeta();
         if (paths.length == 0) {
-            builder.path('/' + method.getName()).sig(TypeUtils.buildSig(method));
+            String pathSegment = buildPathSegment(restConfig, serviceMeta, method);
+            builder.path(pathSegment).sig(TypeUtils.buildSig(method));
         } else {
             builder.path(paths);
         }
 
-        ServiceMeta serviceMeta = methodMeta.getServiceMeta();
         if (globalCorsMeta == null) {
             globalCorsMeta = CorsUtils.getGlobalCorsMeta(restConfig);
         }
@@ -110,6 +114,41 @@ public class BasicRequestMappingResolver implements RequestMappingResolver {
                 .service(serviceMeta.getServiceGroup(), serviceMeta.getServiceVersion())
                 .cors(globalCorsMeta)
                 .build();
+    }
+
+    private String buildPathSegment(RestConfig restConfig, ServiceMeta serviceMeta, Method method) {
+        String methodName = method.getName();
+
+        if (shouldUseOriginalMethodName(restConfig, serviceMeta)) {
+            return formatPath(methodName);
+        }
+
+        if (serviceMeta.getServiceDescriptor() instanceof StubServiceDescriptor) {
+            MethodDescriptor methodDescriptor =
+                    serviceMeta.getServiceDescriptor().getMethod(methodName, method.getParameterTypes());
+            if (methodDescriptor != null) {
+                return formatPath(methodName);
+            }
+            if (Character.isLowerCase(methodName.charAt(0))) {
+                return formatPath(capitalizeFirstLetter(methodName));
+            }
+        }
+
+        return formatPath(methodName);
+    }
+
+    private boolean shouldUseOriginalMethodName(RestConfig restConfig, ServiceMeta serviceMeta) {
+        return (restConfig != null && !restConfig.getCaseSensitiveMatchOrDefault())
+                || serviceMeta.getServiceDescriptor() instanceof ReflectionServiceDescriptor;
+    }
+
+    private String formatPath(String segment) {
+        return "/" + segment;
+    }
+
+    private String capitalizeFirstLetter(String str) {
+        char firstChar = Character.toUpperCase(str.charAt(0));
+        return str.length() == 1 ? String.valueOf(firstChar) : firstChar + str.substring(1);
     }
 
     private Builder builder(AnnotationMeta<?> mapping) {
