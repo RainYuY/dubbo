@@ -61,6 +61,13 @@ public interface McpConstant {
     String PARAM_TRIPLE_SERVICE_GROUP = "tri-service-group";
     String PARAM_REQUEST_BODY_PAYLOAD = "requestBodyPayload";
 
+    // URL parameter names for MCP configuration
+    String PARAM_MCP_ENABLED = "mcp.enabled";
+    String PARAM_MCP_TOOL_NAME = "mcp.tool-name";
+    String PARAM_MCP_DESCRIPTION = "mcp.description";
+    String PARAM_MCP_TAGS = "mcp.tags";
+    String PARAM_MCP_PRIORITY = "mcp.priority";
+
     // Default parameter descriptions
     String PARAM_DESCRIPTION_DOUBLE = "A numeric value of type Double";
     String PARAM_DESCRIPTION_INTEGER = "An integer value";

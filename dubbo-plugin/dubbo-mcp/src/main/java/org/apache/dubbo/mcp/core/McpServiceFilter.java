@@ -16,8 +16,10 @@
  */
 package org.apache.dubbo.mcp.core;
 
+import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.config.Configuration;
 import org.apache.dubbo.common.config.ConfigurationUtils;
+import org.apache.dubbo.common.constants.LoggerCodeConstants;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.StringUtils;
@@ -28,6 +30,7 @@ import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.model.ProviderModel;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -45,32 +48,32 @@ public class McpServiceFilter {
         this.configuration = ConfigurationUtils.getGlobalConfiguration(applicationModel);
         this.defaultEnabled = configuration.getBoolean(McpConstant.SETTINGS_MCP_DEFAULT_ENABLED, true);
 
-        // Parse include and exclude patterns
         String includeStr = configuration.getString(McpConstant.SETTINGS_MCP_INCLUDE_PATTERNS, "");
         String excludeStr = configuration.getString(McpConstant.SETTINGS_MCP_EXCLUDE_PATTERNS, "");
 
         this.includePatterns = parsePatterns(includeStr);
         this.excludePatterns = parsePatterns(excludeStr);
-
-        logger.debug(
-                "MCP service filter initialized: defaultEnabled={}, includePatterns={}, excludePatterns={}",
-                defaultEnabled,
-                includeStr,
-                excludeStr);
     }
 
     /**
-     * Check if service should be exposed as MCP tool
+     * Check if service should be exposed as MCP tool.
+     * Priority: URL Parameters > Annotations > Configuration File > Default
      */
     public boolean shouldExposeAsMcpTool(ProviderModel providerModel) {
         String interfaceName = providerModel.getServiceModel().getInterfaceName();
 
-        // 1. Check exclude patterns (the highest priority)
         if (isMatchedByPatterns(interfaceName, excludePatterns)) {
             return false;
         }
 
-        // 2. Check annotation configuration
+        URL serviceUrl = getServiceUrl(providerModel);
+        if (serviceUrl != null) {
+            String urlValue = serviceUrl.getParameter(McpConstant.PARAM_MCP_ENABLED);
+            if (urlValue != null && StringUtils.isNotEmpty(urlValue)) {
+                return Boolean.parseBoolean(urlValue);
+            }
+        }
+
         Object serviceBean = providerModel.getServiceInstance();
         if (serviceBean != null) {
             DubboService dubboService = serviceBean.getClass().getAnnotation(DubboService.class);
@@ -79,51 +82,108 @@ public class McpServiceFilter {
             }
         }
 
-        // 3. Check specific service configuration
-        String serviceSpecificKey = McpConstant.SETTINGS_MCP_SERVICE_PREFIX + "." + interfaceName + "."
-                + McpConstant.SETTINGS_MCP_SERVICE_ENABLED_SUFFIX;
-        Boolean configEnabled = configuration.getBoolean(serviceSpecificKey, (Boolean) null);
-        if (configEnabled != null) {
-            return configEnabled;
+        String serviceSpecificKey = McpConstant.SETTINGS_MCP_SERVICE_PREFIX + "." + interfaceName + ".enabled";
+        if (configuration.containsKey(serviceSpecificKey)) {
+            return configuration.getBoolean(serviceSpecificKey, false);
         }
 
-        // 4. Check include patterns
+        if (configuration.containsKey(McpConstant.PARAM_MCP_ENABLED)) {
+            return configuration.getBoolean(McpConstant.PARAM_MCP_ENABLED, false);
+        }
+
         if (includePatterns.length > 0) {
-            // If include patterns are defined, only services matching them should be included
             return isMatchedByPatterns(interfaceName, includePatterns);
         }
 
-        // 5. Use default configuration
         return defaultEnabled;
     }
 
     /**
-     * Check if specific method should be exposed as MCP tool
+     * Check if specific method should be exposed as MCP tool.
+     * Priority: @McpTool(enabled=false) > URL Parameters > @McpTool(enabled=true) > Configuration > Service-level
      */
     public boolean shouldExposeMethodAsMcpTool(ProviderModel providerModel, Method method) {
         String interfaceName = providerModel.getServiceModel().getInterfaceName();
+        String methodName = method.getName();
 
-        // 1. Check exclude patterns first (highest priority)
         if (isMatchedByPatterns(interfaceName, excludePatterns)) {
             return false;
         }
 
-        // 2. Check method-level @McpTool annotation
-        McpTool mcpTool = method.getAnnotation(McpTool.class);
-        if (mcpTool != null) {
-            return mcpTool.enabled();
+        McpTool methodMcpTool = getMethodMcpTool(providerModel, method);
+
+        if (methodMcpTool != null && !methodMcpTool.enabled()) {
+            return false;
         }
 
-        // 3. Check method-level configuration
-        String methodConfigKey = McpConstant.SETTINGS_MCP_SERVICE_PREFIX + "." + interfaceName + ".methods."
-                + method.getName() + "." + McpConstant.SETTINGS_MCP_SERVICE_ENABLED_SUFFIX;
-        Boolean methodEnabled = configuration.getBoolean(methodConfigKey, (Boolean) null);
-        if (methodEnabled != null) {
-            return methodEnabled;
+        URL serviceUrl = getServiceUrl(providerModel);
+        if (serviceUrl != null) {
+            String methodUrlValue = serviceUrl.getMethodParameter(methodName, McpConstant.PARAM_MCP_ENABLED);
+
+            if (methodUrlValue != null && StringUtils.isNotEmpty(methodUrlValue)) {
+                return Boolean.parseBoolean(methodUrlValue);
+            }
+
+            String serviceLevelValue = serviceUrl.getParameter(McpConstant.PARAM_MCP_ENABLED);
+
+            if (serviceLevelValue != null && StringUtils.isNotEmpty(serviceLevelValue)) {
+                return Boolean.parseBoolean(serviceLevelValue);
+            }
         }
 
-        // 4. Default to false for methods if no explicit method-level annotation or config enables them.
+        if (methodMcpTool != null && methodMcpTool.enabled()) {
+            return true;
+        }
+
+        String methodConfigKey =
+                McpConstant.SETTINGS_MCP_SERVICE_PREFIX + "." + interfaceName + ".methods." + methodName + ".enabled";
+        if (configuration.containsKey(methodConfigKey)) {
+            return configuration.getBoolean(methodConfigKey, false);
+        }
+
+        if (shouldExposeAsMcpTool(providerModel)) {
+            return Modifier.isPublic(method.getModifiers());
+        }
+
         return false;
+    }
+
+    /**
+     * Get @McpTool annotation from method, checking both interface and implementation class.
+     */
+    private McpTool getMethodMcpTool(ProviderModel providerModel, Method method) {
+        String methodName = method.getName();
+        Class<?>[] paramTypes = method.getParameterTypes();
+
+        Object serviceBean = providerModel.getServiceInstance();
+        if (serviceBean != null) {
+            try {
+                Method implMethod = serviceBean.getClass().getMethod(methodName, paramTypes);
+                McpTool implMcpTool = implMethod.getAnnotation(McpTool.class);
+                if (implMcpTool != null) {
+                    return implMcpTool;
+                }
+            } catch (NoSuchMethodException e) {
+                // Method not found in implementation class
+            }
+        }
+
+        McpTool interfaceMcpTool = method.getAnnotation(McpTool.class);
+        if (interfaceMcpTool != null) {
+            return interfaceMcpTool;
+        }
+
+        Class<?> serviceInterface = providerModel.getServiceModel().getServiceInterfaceClass();
+        if (serviceInterface != null) {
+            try {
+                Method interfaceMethod = serviceInterface.getMethod(methodName, paramTypes);
+                return interfaceMethod.getAnnotation(McpTool.class);
+            } catch (NoSuchMethodException e) {
+                // Method not found in service interface
+            }
+        }
+
+        return null;
     }
 
     public McpToolConfig getMcpToolConfig(ProviderModel providerModel, Method method) {
@@ -132,7 +192,7 @@ public class McpServiceFilter {
 
         config.setToolName(method.getName());
 
-        McpTool mcpTool = method.getAnnotation(McpTool.class);
+        McpTool mcpTool = getMethodMcpTool(providerModel, method);
         if (mcpTool != null) {
             if (StringUtils.isNotEmpty(mcpTool.name())) {
                 config.setToolName(mcpTool.name());
@@ -149,28 +209,47 @@ public class McpServiceFilter {
         String methodPrefix =
                 McpConstant.SETTINGS_MCP_SERVICE_PREFIX + "." + interfaceName + ".methods." + method.getName() + ".";
 
-        String configToolName = configuration.getString(methodPrefix + McpConstant.SETTINGS_MCP_SERVICE_NAME_SUFFIX);
+        String configToolName = configuration.getString(methodPrefix + "name");
         if (StringUtils.isNotEmpty(configToolName)) {
             config.setToolName(configToolName);
         }
 
-        String configDescription =
-                configuration.getString(methodPrefix + McpConstant.SETTINGS_MCP_SERVICE_DESCRIPTION_SUFFIX);
+        String configDescription = configuration.getString(methodPrefix + "description");
         if (StringUtils.isNotEmpty(configDescription)) {
             config.setDescription(configDescription);
         }
 
-        String configTags = configuration.getString(methodPrefix + McpConstant.SETTINGS_MCP_SERVICE_TAGS_SUFFIX);
+        String configTags = configuration.getString(methodPrefix + "tags");
         if (StringUtils.isNotEmpty(configTags)) {
             config.setTags(Arrays.asList(configTags.split(",")));
         }
 
-        String configPriority = configuration.getString(methodPrefix + "priority");
-        if (StringUtils.isNotEmpty(configPriority)) {
-            try {
-                config.setPriority(Integer.parseInt(configPriority));
-            } catch (NumberFormatException e) {
-                logger.warn("Invalid priority value: " + configPriority + " for method: " + method.getName());
+        URL serviceUrl = getServiceUrl(providerModel);
+        if (serviceUrl != null) {
+            String urlToolName = serviceUrl.getMethodParameter(method.getName(), McpConstant.PARAM_MCP_TOOL_NAME);
+            if (urlToolName != null && StringUtils.isNotEmpty(urlToolName)) {
+                config.setToolName(urlToolName);
+            }
+
+            String urlDescription = serviceUrl.getMethodParameter(method.getName(), McpConstant.PARAM_MCP_DESCRIPTION);
+            if (urlDescription != null && StringUtils.isNotEmpty(urlDescription)) {
+                config.setDescription(urlDescription);
+            }
+
+            String urlTags = serviceUrl.getMethodParameter(method.getName(), McpConstant.PARAM_MCP_TAGS);
+            if (urlTags != null && StringUtils.isNotEmpty(urlTags)) {
+                config.setTags(Arrays.asList(urlTags.split(",")));
+            }
+
+            String urlPriority = serviceUrl.getMethodParameter(method.getName(), McpConstant.PARAM_MCP_PRIORITY);
+            if (urlPriority != null && StringUtils.isNotEmpty(urlPriority)) {
+                try {
+                    config.setPriority(Integer.parseInt(urlPriority));
+                } catch (NumberFormatException e) {
+                    logger.warn(
+                            LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                            "Invalid URL priority value: " + urlPriority + " for method: " + method.getName());
+                }
             }
         }
 
@@ -183,23 +262,59 @@ public class McpServiceFilter {
 
         String servicePrefix = McpConstant.SETTINGS_MCP_SERVICE_PREFIX + "." + interfaceName + ".";
 
-        String configToolName = configuration.getString(servicePrefix + McpConstant.SETTINGS_MCP_SERVICE_NAME_SUFFIX);
+        String configToolName = configuration.getString(servicePrefix + "name");
         if (StringUtils.isNotEmpty(configToolName)) {
             config.setToolName(configToolName);
         }
 
-        String configDescription =
-                configuration.getString(servicePrefix + McpConstant.SETTINGS_MCP_SERVICE_DESCRIPTION_SUFFIX);
+        String configDescription = configuration.getString(servicePrefix + "description");
         if (StringUtils.isNotEmpty(configDescription)) {
             config.setDescription(configDescription);
         }
 
-        String configTags = configuration.getString(servicePrefix + McpConstant.SETTINGS_MCP_SERVICE_TAGS_SUFFIX);
+        String configTags = configuration.getString(servicePrefix + "tags");
         if (StringUtils.isNotEmpty(configTags)) {
             config.setTags(Arrays.asList(configTags.split(",")));
         }
 
+        URL serviceUrl = getServiceUrl(providerModel);
+        if (serviceUrl != null) {
+            String urlToolName = serviceUrl.getParameter(McpConstant.PARAM_MCP_TOOL_NAME);
+            if (urlToolName != null && StringUtils.isNotEmpty(urlToolName)) {
+                config.setToolName(urlToolName);
+            }
+
+            String urlDescription = serviceUrl.getParameter(McpConstant.PARAM_MCP_DESCRIPTION);
+            if (urlDescription != null && StringUtils.isNotEmpty(urlDescription)) {
+                config.setDescription(urlDescription);
+            }
+
+            String urlTags = serviceUrl.getParameter(McpConstant.PARAM_MCP_TAGS);
+            if (urlTags != null && StringUtils.isNotEmpty(urlTags)) {
+                config.setTags(Arrays.asList(urlTags.split(",")));
+            }
+
+            String urlPriority = serviceUrl.getParameter(McpConstant.PARAM_MCP_PRIORITY);
+            if (urlPriority != null && StringUtils.isNotEmpty(urlPriority)) {
+                try {
+                    config.setPriority(Integer.parseInt(urlPriority));
+                } catch (NumberFormatException e) {
+                    logger.warn(
+                            LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                            "Invalid URL priority value: " + urlPriority + " for service: " + interfaceName);
+                }
+            }
+        }
+
         return config;
+    }
+
+    private URL getServiceUrl(ProviderModel providerModel) {
+        List<URL> serviceUrls = providerModel.getServiceUrls();
+        if (serviceUrls != null && !serviceUrls.isEmpty()) {
+            return serviceUrls.get(0);
+        }
+        return null;
     }
 
     private Pattern[] parsePatterns(String patternStr) {

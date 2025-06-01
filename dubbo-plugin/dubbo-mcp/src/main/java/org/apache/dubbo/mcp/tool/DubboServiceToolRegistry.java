@@ -35,8 +35,10 @@ import org.apache.dubbo.rpc.protocol.tri.rest.openapi.model.Operation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
@@ -57,6 +59,7 @@ public class DubboServiceToolRegistry {
     private final DubboMcpGenericCaller genericCaller;
     private final McpServiceFilter mcpServiceFilter;
     private final Map<String, McpServerFeatures.AsyncToolSpecification> registeredTools = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> serviceToToolsMapping = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
 
     public DubboServiceToolRegistry(
@@ -76,22 +79,21 @@ public class DubboServiceToolRegistry {
         List<URL> statedURLs = providerModel.getServiceUrls();
 
         if (statedURLs == null || statedURLs.isEmpty()) {
-            logger.debug("No URLs found for service: {}", serviceDescriptor.getInterfaceName());
             return 0;
         }
 
         try {
             URL url = statedURLs.get(0);
             int registeredCount = 0;
+            String serviceKey = getServiceKey(providerModel);
+            Set<String> toolNames = new HashSet<>();
 
             Class<?> serviceInterface = serviceDescriptor.getServiceInterfaceClass();
             if (serviceInterface == null) {
-                logger.debug("Service interface class not found for: {}", serviceDescriptor.getInterfaceName());
                 return 0;
             }
 
             Method[] methods = serviceInterface.getDeclaredMethods();
-
             boolean shouldRegisterServiceLevel = mcpServiceFilter.shouldExposeAsMcpTool(providerModel);
 
             for (Method method : methods) {
@@ -99,17 +101,22 @@ public class DubboServiceToolRegistry {
                     McpServiceFilter.McpToolConfig toolConfig =
                             mcpServiceFilter.getMcpToolConfig(providerModel, method);
 
-                    if (registerMethodAsTool(providerModel, method, url, toolConfig)) {
+                    String toolName = registerMethodAsTool(providerModel, method, url, toolConfig);
+                    if (toolName != null) {
+                        toolNames.add(toolName);
                         registeredCount++;
                     }
                 }
             }
 
             if (registeredCount == 0 && shouldRegisterServiceLevel) {
-                registeredCount = registerServiceLevelTools(providerModel, url);
+                Set<String> serviceToolNames = registerServiceLevelTools(providerModel, url);
+                toolNames.addAll(serviceToolNames);
+                registeredCount = serviceToolNames.size();
             }
 
             if (registeredCount > 0) {
+                serviceToToolsMapping.put(serviceKey, toolNames);
                 logger.info(
                         "Registered {} MCP tools for service: {}",
                         registeredCount,
@@ -129,7 +136,45 @@ public class DubboServiceToolRegistry {
         }
     }
 
-    private boolean registerMethodAsTool(
+    public void unregisterService(ProviderModel providerModel) {
+        String serviceKey = getServiceKey(providerModel);
+        Set<String> toolNames = serviceToToolsMapping.remove(serviceKey);
+
+        if (toolNames == null || toolNames.isEmpty()) {
+            return;
+        }
+
+        int unregisteredCount = 0;
+        for (String toolName : toolNames) {
+            try {
+                McpServerFeatures.AsyncToolSpecification toolSpec = registeredTools.remove(toolName);
+                if (toolSpec != null) {
+                    mcpServer.removeTool(toolName).block();
+                    unregisteredCount++;
+                }
+            } catch (Exception e) {
+                logger.error(
+                        LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                        "",
+                        "",
+                        "Failed to unregister MCP tool: " + toolName,
+                        e);
+            }
+        }
+
+        if (unregisteredCount > 0) {
+            logger.info(
+                    "Unregistered {} MCP tools for service: {}",
+                    unregisteredCount,
+                    providerModel.getServiceModel().getInterfaceName());
+        }
+    }
+
+    private String getServiceKey(ProviderModel providerModel) {
+        return providerModel.getServiceKey();
+    }
+
+    private String registerMethodAsTool(
             ProviderModel providerModel, Method method, URL url, McpServiceFilter.McpToolConfig toolConfig) {
         try {
             String toolName = toolConfig.getToolName();
@@ -137,30 +182,24 @@ public class DubboServiceToolRegistry {
                 toolName = method.getName();
             }
 
-            // Check if tool already registered
             if (registeredTools.containsKey(toolName)) {
-                logger.debug("Tool {} already registered, skipping", toolName);
-                return false;
+                return null;
             }
 
-            // Generate tool description (prioritize from annotation, fallback to default)
             String description = toolConfig.getDescription();
             if (description == null || description.isEmpty()) {
                 description = generateDefaultDescription(method, providerModel);
             }
 
-            // Create MCP tool
             McpSchema.Tool mcpTool = new McpSchema.Tool(toolName, description, generateToolSchema(method));
 
-            // Create tool specification
             McpServerFeatures.AsyncToolSpecification toolSpec =
                     createMethodToolSpecification(mcpTool, providerModel, method, url);
 
             mcpServer.addTool(toolSpec).block();
             registeredTools.put(toolName, toolSpec);
 
-            logger.debug("Registered MCP tool: {} for method: {}", toolName, method.getName());
-            return true;
+            return toolName;
 
         } catch (Exception e) {
             logger.error(
@@ -169,32 +208,27 @@ public class DubboServiceToolRegistry {
                     "",
                     "Failed to register method as MCP tool: " + method.getName(),
                     e);
-            return false;
+            return null;
         }
     }
 
-    private int registerServiceLevelTools(ProviderModel providerModel, URL url) {
+    private Set<String> registerServiceLevelTools(ProviderModel providerModel, URL url) {
         ServiceDescriptor serviceDescriptor = providerModel.getServiceModel();
+        Set<String> toolNames = new HashSet<>();
 
-        // Get service-level configuration
         McpServiceFilter.McpToolConfig serviceConfig = mcpServiceFilter.getMcpToolConfig(providerModel);
 
-        // Convert service to tools using OpenAPI
         Map<String, McpSchema.Tool> tools = toolConverter.convertToTools(serviceDescriptor, url, serviceConfig);
 
         if (tools.isEmpty()) {
-            logger.debug("No tools found for service: {}", serviceDescriptor.getInterfaceName());
-            return 0;
+            return toolNames;
         }
 
-        int registeredCount = 0;
         for (Map.Entry<String, McpSchema.Tool> entry : tools.entrySet()) {
             McpSchema.Tool tool = entry.getValue();
             String toolId = tool.name();
 
-            // Check if tool already registered
             if (registeredTools.containsKey(toolId)) {
-                logger.debug("Tool {} already registered, skipping", toolId);
                 continue;
             }
 
@@ -213,9 +247,8 @@ public class DubboServiceToolRegistry {
                         createServiceToolSpecification(tool, operation, url);
                 mcpServer.addTool(toolSpec).block();
                 registeredTools.put(toolId, toolSpec);
-                registeredCount++;
+                toolNames.add(toolId);
 
-                logger.debug("Registered MCP tool: {} (service-level)", toolId);
             } catch (Exception e) {
                 logger.error(
                         LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
@@ -226,7 +259,7 @@ public class DubboServiceToolRegistry {
             }
         }
 
-        return registeredCount;
+        return toolNames;
     }
 
     private McpServerFeatures.AsyncToolSpecification createMethodToolSpecification(
@@ -235,9 +268,7 @@ public class DubboServiceToolRegistry {
         final String interfaceName = providerModel.getServiceModel().getInterfaceName();
         final String methodName = method.getName();
         final Class<?>[] parameterClasses = method.getParameterTypes();
-
         final List<String> orderedJavaParameterNames = getStrings(method);
-
         final String group = url.getGroup();
         final String version = url.getVersion();
 
@@ -424,7 +455,6 @@ public class DubboServiceToolRegistry {
         for (String toolId : registeredTools.keySet()) {
             try {
                 mcpServer.removeTool(toolId).block();
-                logger.debug("Unregistered MCP tool: {}", toolId);
             } catch (Exception e) {
                 logger.error(
                         LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,

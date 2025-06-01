@@ -82,7 +82,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             return;
         }
         try {
-            logger.info("Initializing MCP server and tools");
+            logger.info("Initializing MCP server and dynamic service registration");
 
             // Initialize service filter
             mcpServiceFilter = new McpServiceFilter(applicationModel);
@@ -106,18 +106,21 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
             toolRegistry = new DubboServiceToolRegistry(mcpAsyncServer, toolConverter, genericCaller, mcpServiceFilter);
 
+            applicationModel.getBeanFactory().registerBean(toolRegistry);
+
             Collection<ProviderModel> providerModels =
                     applicationModel.getApplicationServiceRepository().allProviderModels();
 
             int registeredCount = 0;
             for (ProviderModel pm : providerModels) {
-                // Register services based on both old and new logic
                 int serviceRegisteredCount = toolRegistry.registerService(pm);
                 registeredCount += serviceRegisteredCount;
             }
 
             exportMcpService(applicationModel);
-            logger.info("MCP server initialized successfully, {} tools registered", registeredCount);
+            logger.info(
+                    "MCP server initialized successfully, {} existing tools registered, dynamic registration enabled",
+                    registeredCount);
         } catch (Exception e) {
             logger.error(
                     LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,

@@ -59,7 +59,7 @@ public class DubboOpenApiToolConverter {
 
     public Map<String, McpSchema.Tool> convertToTools(
             ServiceDescriptor svcDesc, URL svcUrl, McpServiceFilter.McpToolConfig toolConfig) {
-        opCache.clear(); // Clear cache for each new service conversion context
+        opCache.clear();
 
         OpenAPIRequest req = new OpenAPIRequest();
         String intfName = svcDesc.getInterfaceName();
@@ -68,7 +68,6 @@ public class DubboOpenApiToolConverter {
         OpenAPI openApiDef = openApiService.getOpenAPI(req);
 
         if (openApiDef == null || openApiDef.getPaths() == null) {
-            logger.debug("OpenAPI definition or paths are null for service: {}", intfName);
             return new HashMap<>();
         }
 
@@ -82,7 +81,6 @@ public class DubboOpenApiToolConverter {
                     HttpMethods httpMethod = opEntry.getKey();
                     Operation op = opEntry.getValue();
                     if (op == null || op.getOperationId() == null) {
-                        logger.debug("Skipping operation without ID for path {} and HTTP method {}", path, httpMethod);
                         continue;
                     }
                     String opId = op.getOperationId();
@@ -91,7 +89,7 @@ public class DubboOpenApiToolConverter {
 
                     McpSchema.Tool mcpTool = convertOperationToMcpTool(path, httpMethod, op, methodConfig);
                     mcpTools.put(opId, mcpTool);
-                    opCache.put(opId, op); // Cache the original Operation object
+                    opCache.put(opId, op);
                 }
             }
         }
@@ -107,7 +105,6 @@ public class DubboOpenApiToolConverter {
         String opId = op.getOperationId();
 
         String toolName = generateToolName(op, toolConfig);
-
         String desc = generateToolDescription(op, toolConfig, path, method);
 
         Map<String, Object> paramsSchemaMap = extractParameterSchema(op);
@@ -126,9 +123,6 @@ public class DubboOpenApiToolConverter {
         return new McpSchema.Tool(toolName, desc, schemaJson);
     }
 
-    /**
-     * Generate a unique and meaningful tool name
-     */
     private String generateToolName(Operation op, McpServiceFilter.McpToolConfig toolConfig) {
         String opId = op.getOperationId();
 
@@ -141,9 +135,6 @@ public class DubboOpenApiToolConverter {
         return opId;
     }
 
-    /**
-     * Generate tool description
-     */
     private String generateToolDescription(
             Operation op, McpServiceFilter.McpToolConfig toolConfig, String path, HttpMethods method) {
         if (toolConfig != null
@@ -169,21 +160,18 @@ public class DubboOpenApiToolConverter {
         Map<String, Object> props = new HashMap<>();
         schema.put(McpConstant.SCHEMA_PROPERTY_TYPE, JsonSchemaType.OBJECT_SCHEMA.getJsonSchemaType());
 
-        // Handle path, query, header parameters first
         if (op.getParameters() != null) {
             for (Parameter apiParam : op.getParameters()) {
                 if (McpConstant.PARAM_TRIPLE_SERVICE_GROUP.equals(apiParam.getName())) {
                     continue;
                 }
                 if (apiParam.getSchema() != null) {
-                    // Pass the parameter name for potentially better default descriptions
                     props.put(
                             apiParam.getName(), convertOpenApiSchemaToMcpMap(apiParam.getSchema(), apiParam.getName()));
                 }
             }
         }
 
-        // Handle Request Body
         if (op.getRequestBody() != null && op.getRequestBody().getContents() != null) {
             op.getRequestBody().getContents().values().stream().findFirst().ifPresent(mediaType -> {
                 if (mediaType.getSchema() != null) {
@@ -193,18 +181,14 @@ public class DubboOpenApiToolConverter {
                     if (methodMeta != null && methodMeta.getParameters() != null) {
                         ParameterMeta[] methodParams = methodMeta.getParameters();
 
-                        // Handle multiple primitive parameters
-                        // Check if we have multiple parameters with primitive types that should be treated individually
                         boolean shouldCreateIndividualParams =
                                 methodParams.length > 1 && allParamsArePrimitive(methodParams);
 
                         if (shouldCreateIndividualParams) {
-                            // For multiple primitive parameters, create individual properties
                             for (int i = 0; i < methodParams.length; i++) {
                                 ParameterMeta param = methodParams[i];
                                 String paramName = param.getName();
 
-                                // Use meaningful parameter name or fallback to positional name
                                 if (paramName == null || paramName.startsWith(McpConstant.DEFAULT_TOOL_NAME_PREFIX)) {
                                     paramName = param.getType().getSimpleName().toLowerCase() + "_" + (i + 1);
                                     logger.warn(
@@ -217,7 +201,6 @@ public class DubboOpenApiToolConverter {
                                                     + "'. Ensure '-parameters' compiler flag is enabled.");
                                 }
 
-                                // Create schema for this parameter based on its Java type
                                 Map<String, Object> paramSchema = new HashMap<>();
                                 Class<?> paramType = param.getType();
 
@@ -250,14 +233,12 @@ public class DubboOpenApiToolConverter {
                                             McpConstant.SCHEMA_PROPERTY_DESCRIPTION,
                                             McpConstant.PARAM_DESCRIPTION_BOOLEAN);
                                 } else {
-                                    // For complex types, use the OpenAPI schema
                                     paramSchema = convertOpenApiSchemaToMcpMap(bodySchema.getItems(), paramName);
                                 }
 
                                 props.put(paramName, paramSchema);
                             }
                         } else {
-                            // Handle single parameter or POJO case (existing logic)
                             String inferredBodyParamName = McpConstant.PARAM_REQUEST_BODY_PAYLOAD;
                             ParameterMeta requestBodyJavaParam = null;
 
@@ -336,7 +317,6 @@ public class DubboOpenApiToolConverter {
         return schema;
     }
 
-    // Overloaded method for cases where property name is not known or not applicable (e.g. array items)
     private Map<String, Object> convertOpenApiSchemaToMcpMap(Schema openApiSchema) {
         return convertOpenApiSchemaToMcpMap(openApiSchema, null);
     }
@@ -380,13 +360,11 @@ public class DubboOpenApiToolConverter {
             openApiSchema
                     .getProperties()
                     .forEach((name, propSchema) ->
-                            // Pass the nested property name for its default description generation
                             nestedProps.put(name, convertOpenApiSchemaToMcpMap(propSchema, name)));
             mcpMap.put(McpConstant.SCHEMA_PROPERTY_PROPERTIES, nestedProps);
         }
 
         if (Schema.Type.ARRAY.equals(openApiSchema.getType()) && openApiSchema.getItems() != null) {
-            // For array items, the 'propertyName' context is less direct, so passing null or a generic placeholder
             mcpMap.put(
                     McpConstant.SCHEMA_PROPERTY_ITEMS,
                     convertOpenApiSchemaToMcpMap(
@@ -423,13 +401,9 @@ public class DubboOpenApiToolConverter {
         return namePrefix + typeOrRefString + ".";
     }
 
-    /**
-     * Check if all parameters are primitive types that should be treated individually
-     */
     private boolean allParamsArePrimitive(ParameterMeta[] methodParams) {
         for (ParameterMeta param : methodParams) {
             Class<?> paramType = param.getType();
-            // Check if parameter is a primitive type or wrapper type
             if (!TypeSchemaUtils.isPrimitiveOrWrapper(paramType)) {
                 return false;
             }
@@ -437,9 +411,6 @@ public class DubboOpenApiToolConverter {
         return true;
     }
 
-    /**
-     * Get method-specific configuration from operation metadata
-     */
     private McpServiceFilter.McpToolConfig getMethodConfig(Operation op, McpServiceFilter.McpToolConfig defaultConfig) {
         // Try to get method-specific configuration from operation metadata
         // This would need integration with the service filter to get method-level config
