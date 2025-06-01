@@ -356,23 +356,9 @@ public @interface DubboService {
     String preferSerialization() default "";
 
     /**
-     * Whether to expose this service as MCP tool, default value is false
-     * Can be overridden by configuration property: dubbo.protocol.triple.rest.mcp.service.{interfaceName}.enabled
+     * Whether to expose methods in this service as MCP tools, default value is false
+     * This controls whether methods in this service class can be exposed as MCP tools.
+     * Specific method-level configuration should be done via method annotations.
      */
     boolean mcpEnabled() default false;
-
-    /**
-     * MCP tool name for this service, if empty, use interfaceName + methodName as tool name
-     */
-    String mcpToolName() default "";
-
-    /**
-     * MCP tool description for this service
-     */
-    String mcpDescription() default "";
-
-    /**
-     * MCP tool tags for categorization
-     */
-    String[] mcpTags() default {};
 }

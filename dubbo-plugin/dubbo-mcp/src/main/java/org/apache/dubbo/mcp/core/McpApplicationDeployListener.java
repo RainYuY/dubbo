@@ -104,20 +104,16 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
             DubboMcpGenericCaller genericCaller = new DubboMcpGenericCaller(applicationModel);
 
-            toolRegistry = new DubboServiceToolRegistry(mcpAsyncServer, toolConverter, genericCaller);
+            toolRegistry = new DubboServiceToolRegistry(mcpAsyncServer, toolConverter, genericCaller, mcpServiceFilter);
 
             Collection<ProviderModel> providerModels =
                     applicationModel.getApplicationServiceRepository().allProviderModels();
 
             int registeredCount = 0;
             for (ProviderModel pm : providerModels) {
-                // Check if service should be exposed as MCP tool
-                if (mcpServiceFilter.shouldExposeAsMcpTool(pm)) {
-                    // Get MCP tool configuration
-                    McpServiceFilter.McpToolConfig toolConfig = mcpServiceFilter.getMcpToolConfig(pm);
-                    toolRegistry.registerService(pm, toolConfig);
-                    registeredCount++;
-                }
+                // Register services based on both old and new logic
+                int serviceRegisteredCount = toolRegistry.registerService(pm);
+                registeredCount += serviceRegisteredCount;
             }
 
             exportMcpService(applicationModel);
@@ -163,7 +159,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
         this.serviceConfig = InternalServiceConfigBuilder.<McpSseService>newBuilder(applicationModel)
                 .interfaceClass(McpSseService.class)
                 .protocol(CommonConstants.TRIPLE, McpConstant.MCP_SERVICE_PROTOCOL)
-                .port(getRegisterPort(), McpConstant.MCP_SERVICE_PORT)
+                .port(getRegisterPort(), String.valueOf(McpConstant.MCP_SERVICE_PORT))
                 .registryId("internal-mcp-registry")
                 .executor(internalServiceExecutor)
                 .ref(mcpSseServiceImpl)

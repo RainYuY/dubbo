@@ -16,11 +16,17 @@
  */
 package org.apache.dubbo.mcp;
 
+/**
+ * Constants for MCP (Model Context Protocol) integration
+ */
 public interface McpConstant {
 
     String SETTINGS_MCP_PREFIX = "dubbo.protocol.triple.rest.mcp";
     String SETTINGS_MCP_ENABLE = "dubbo.protocol.triple.rest.mcp.enabled";
     String SETTINGS_MCP_PORT = "dubbo.protocol.triple.rest.mcp.port";
+    String SETTINGS_MCP_DEFAULT_ENABLED = "dubbo.protocol.triple.rest.mcp.default.enabled";
+    String SETTINGS_MCP_INCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.include-patterns";
+    String SETTINGS_MCP_EXCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.exclude-patterns";
     String SETTINGS_MCP_PATHS_SSE = "dubbo.protocol.triple.rest.mcp.path.sse";
     String SETTINGS_MCP_PATHS_MESSAGE = "dubbo.protocol.triple.rest.mcp.path.message";
 
@@ -31,11 +37,33 @@ public interface McpConstant {
     String SETTINGS_MCP_SERVICE_DESCRIPTION_SUFFIX = "description";
     String SETTINGS_MCP_SERVICE_TAGS_SUFFIX = "tags";
 
-    // Global default configuration
-    String SETTINGS_MCP_DEFAULT_ENABLED = "dubbo.protocol.triple.rest.mcp.default.enabled";
-    String SETTINGS_MCP_INCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.include.patterns";
-    String SETTINGS_MCP_EXCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.exclude.patterns";
+    String MCP_SERVICE_PROTOCOL = "tri";
+    int MCP_SERVICE_PORT = 8081;
 
-    String MCP_SERVICE_PROTOCOL = "mcp-service-protocol";
-    String MCP_SERVICE_PORT = "mcp-service-port";
+    String DEFAULT_TOOL_NAME_PREFIX = "arg";
+    String DEFAULT_TOOL_DESCRIPTION_TEMPLATE = "Execute method '%s' from service '%s'";
+    String DEFAULT_PARAMETER_DESCRIPTION_TEMPLATE = "Parameter %d of type %s";
+
+    String SCHEMA_PROPERTY_TYPE = "type";
+    String SCHEMA_PROPERTY_DESCRIPTION = "description";
+    String SCHEMA_PROPERTY_PROPERTIES = "properties";
+
+    // Common JSON Schema property names
+    String SCHEMA_PROPERTY_FORMAT = "format";
+    String SCHEMA_PROPERTY_ENUM = "enum";
+    String SCHEMA_PROPERTY_DEFAULT = "default";
+    String SCHEMA_PROPERTY_REF = "$ref";
+    String SCHEMA_PROPERTY_ITEMS = "items";
+    String SCHEMA_PROPERTY_ADDITIONAL_PROPERTIES = "additionalProperties";
+    String SCHEMA_PROPERTY_REQUIRED = "required";
+
+    // Specific parameter names
+    String PARAM_TRIPLE_SERVICE_GROUP = "tri-service-group";
+    String PARAM_REQUEST_BODY_PAYLOAD = "requestBodyPayload";
+
+    // Default parameter descriptions
+    String PARAM_DESCRIPTION_DOUBLE = "A numeric value of type Double";
+    String PARAM_DESCRIPTION_INTEGER = "An integer value";
+    String PARAM_DESCRIPTION_STRING = "A string value";
+    String PARAM_DESCRIPTION_BOOLEAN = "A boolean value";
 }
