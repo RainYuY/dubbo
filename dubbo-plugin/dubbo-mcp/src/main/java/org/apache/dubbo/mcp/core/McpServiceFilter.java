@@ -248,6 +248,8 @@ public class McpServiceFilter {
                 } catch (NumberFormatException e) {
                     logger.warn(
                             LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                            "",
+                            "",
                             "Invalid URL priority value: " + urlPriority + " for method: " + method.getName());
                 }
             }
@@ -301,6 +303,8 @@ public class McpServiceFilter {
                 } catch (NumberFormatException e) {
                     logger.warn(
                             LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                            "",
+                            "",
                             "Invalid URL priority value: " + urlPriority + " for service: " + interfaceName);
                 }
             }

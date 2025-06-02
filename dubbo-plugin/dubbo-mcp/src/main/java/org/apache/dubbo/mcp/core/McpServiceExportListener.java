@@ -59,7 +59,11 @@ public class McpServiceExportListener implements ServiceListener {
                     sc.getScopeModel().getServiceRepository().lookupExportedService(serviceKey);
 
             if (providerModel == null) {
-                logger.warn("ProviderModel not found for service: {} with key: {}", sc.getInterface(), serviceKey);
+                logger.warn(
+                        LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                        "",
+                        "",
+                        "ProviderModel not found for service: " + sc.getInterface() + " with key: " + serviceKey);
                 return;
             }
 
