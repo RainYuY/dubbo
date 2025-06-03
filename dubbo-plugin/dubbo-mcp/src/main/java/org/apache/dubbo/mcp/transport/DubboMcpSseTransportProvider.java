@@ -31,12 +31,10 @@ import org.apache.dubbo.rpc.RpcContext;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerSession;
-import io.modelcontextprotocol.spec.McpServerTransport;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import io.netty.util.internal.StringUtil;
 import reactor.core.publisher.Flux;
@@ -157,48 +155,5 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
     private void sendEvent(StreamObserver<ServerSentEvent<String>> responseObserver, String eventType, String data) {
         responseObserver.onNext(
                 ServerSentEvent.<String>builder().event(eventType).data(data).build());
-    }
-
-    private static class DubboMcpSessionTransport implements McpServerTransport {
-
-        private final ObjectMapper JSON;
-
-        private final StreamObserver<ServerSentEvent<String>> responseObserver;
-
-        public DubboMcpSessionTransport(
-                StreamObserver<ServerSentEvent<String>> responseObserver, ObjectMapper objectMapper) {
-            this.responseObserver = responseObserver;
-            this.JSON = objectMapper;
-        }
-
-        @Override
-        public void close() {
-            responseObserver.onCompleted();
-        }
-
-        @Override
-        public Mono<Void> closeGracefully() {
-            return Mono.fromRunnable(responseObserver::onCompleted);
-        }
-
-        @Override
-        public Mono<Void> sendMessage(McpSchema.JSONRPCMessage message) {
-            return Mono.fromRunnable(() -> {
-                try {
-                    String jsonText = JSON.writeValueAsString(message);
-                    responseObserver.onNext(ServerSentEvent.<String>builder()
-                            .event(MESSAGE_EVENT_TYPE)
-                            .data(jsonText)
-                            .build());
-                } catch (Exception e) {
-                    responseObserver.onError(e);
-                }
-            });
-        }
-
-        @Override
-        public <T> T unmarshalFrom(Object data, TypeReference<T> typeRef) {
-            return JSON.convertValue(data, typeRef);
-        }
     }
 }

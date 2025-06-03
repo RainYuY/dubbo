@@ -34,6 +34,7 @@ import org.apache.dubbo.mcp.tool.DubboMcpGenericCaller;
 import org.apache.dubbo.mcp.tool.DubboOpenApiToolConverter;
 import org.apache.dubbo.mcp.tool.DubboServiceToolRegistry;
 import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
+import org.apache.dubbo.mcp.transport.DubboMcpStreamableTransportProvider;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.model.ProviderModel;
@@ -57,9 +58,11 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     private McpServiceFilter mcpServiceFilter;
     private boolean mcpEnable = true;
 
-    private volatile ServiceConfig<McpSseService> serviceConfig;
+    private volatile ServiceConfig<McpService> serviceConfig;
 
     private static DubboMcpSseTransportProvider dubboMcpSseTransportProvider;
+
+    private static DubboMcpStreamableTransportProvider dubboMcpStreamableTransportProvider;
 
     private McpAsyncServer mcpAsyncServer;
 
@@ -71,6 +74,10 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     public static DubboMcpSseTransportProvider getDubboMcpSseTransportProvider() {
         return dubboMcpSseTransportProvider;
+    }
+
+    public static DubboMcpStreamableTransportProvider getDubboMcpStreamableTransportProvider() {
+        return dubboMcpStreamableTransportProvider;
     }
 
     @Override
@@ -88,12 +95,13 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             mcpServiceFilter = new McpServiceFilter(applicationModel);
 
             dubboMcpSseTransportProvider = new DubboMcpSseTransportProvider(new ObjectMapper());
+            dubboMcpStreamableTransportProvider = new DubboMcpStreamableTransportProvider(new ObjectMapper());
             McpSchema.ServerCapabilities.ToolCapabilities toolCapabilities =
                     new McpSchema.ServerCapabilities.ToolCapabilities(true);
             McpSchema.ServerCapabilities serverCapabilities =
                     new McpSchema.ServerCapabilities(null, null, null, null, toolCapabilities);
 
-            mcpAsyncServer = McpServer.async(dubboMcpSseTransportProvider)
+            mcpAsyncServer = McpServer.async(dubboMcpStreamableTransportProvider)
                     .capabilities(serverCapabilities)
                     .build();
 
@@ -150,8 +158,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     public void onFailure(ApplicationModel applicationModel, Throwable cause) {}
 
     private void exportMcpService(ApplicationModel applicationModel) {
-        McpSseServiceImpl mcpSseServiceImpl =
-                applicationModel.getBeanFactory().getOrRegisterBean(McpSseServiceImpl.class);
+        McpServiceImpl mcpSseServiceImpl = applicationModel.getBeanFactory().getOrRegisterBean(McpServiceImpl.class);
 
         ExecutorService internalServiceExecutor = applicationModel
                 .getFrameworkModel()
@@ -159,8 +166,8 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                 .getBean(FrameworkExecutorRepository.class)
                 .getInternalServiceExecutor();
 
-        this.serviceConfig = InternalServiceConfigBuilder.<McpSseService>newBuilder(applicationModel)
-                .interfaceClass(McpSseService.class)
+        this.serviceConfig = InternalServiceConfigBuilder.<McpService>newBuilder(applicationModel)
+                .interfaceClass(McpService.class)
                 .protocol(CommonConstants.TRIPLE, McpConstant.MCP_SERVICE_PROTOCOL)
                 .port(getRegisterPort(), String.valueOf(McpConstant.MCP_SERVICE_PORT))
                 .registryId("internal-mcp-registry")

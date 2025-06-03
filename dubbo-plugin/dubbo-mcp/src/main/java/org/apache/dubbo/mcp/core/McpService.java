@@ -16,35 +16,24 @@
  */
 package org.apache.dubbo.mcp.core;
 
-import org.apache.dubbo.common.resource.Disposable;
 import org.apache.dubbo.common.stream.StreamObserver;
-import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
+import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
+import org.apache.dubbo.remoting.http12.rest.Mapping;
 
-public class McpSseServiceImpl implements McpSseService, Disposable {
+import static org.apache.dubbo.mcp.McpConstant.SETTINGS_MCP_PATHS_MESSAGE;
+import static org.apache.dubbo.mcp.McpConstant.SETTINGS_MCP_PATHS_SSE;
+import static org.apache.dubbo.mcp.McpConstant.SETTINGS_MCP_PATHS_STREAMABLE;
 
-    private DubboMcpSseTransportProvider transportProvider = getTransportProvider();
+@Mapping("")
+public interface McpService {
 
-    @Override
-    public void get(StreamObserver<ServerSentEvent<String>> responseObserver) {
-        if (transportProvider == null) {
-            transportProvider = getTransportProvider();
-        }
-        transportProvider.handleRequest(responseObserver);
-    }
+    @Mapping(value = "//${" + SETTINGS_MCP_PATHS_SSE + ":/mcp/sse}", method = HttpMethods.GET)
+    void get(StreamObserver<ServerSentEvent<String>> responseObserver);
 
-    @Override
-    public void post() {
-        if (transportProvider == null) {
-            transportProvider = getTransportProvider();
-        }
-        transportProvider.handleRequest(null);
-    }
+    @Mapping(value = "//${" + SETTINGS_MCP_PATHS_MESSAGE + ":/mcp/message}", method = HttpMethods.POST)
+    void post();
 
-    private DubboMcpSseTransportProvider getTransportProvider() {
-        return McpApplicationDeployListener.getDubboMcpSseTransportProvider();
-    }
-
-    @Override
-    public void destroy() {}
+    @Mapping(value = "//${" + SETTINGS_MCP_PATHS_STREAMABLE + ":/mcp}")
+    void streamable(StreamObserver<ServerSentEvent<String>> responseObserver);
 }

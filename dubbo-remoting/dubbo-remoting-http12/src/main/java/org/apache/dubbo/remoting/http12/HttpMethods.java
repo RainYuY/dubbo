@@ -66,6 +66,10 @@ public enum HttpMethods {
         return POST.name().equals(name);
     }
 
+    public static boolean isDelete(String name) {
+        return DELETE.name().equals(name);
+    }
+
     public static boolean supportBody(String name) {
         return name.charAt(0) == 'P';
     }

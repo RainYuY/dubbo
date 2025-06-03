@@ -28,6 +28,7 @@ public interface McpConstant {
     String SETTINGS_MCP_INCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.include-patterns";
     String SETTINGS_MCP_EXCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.exclude-patterns";
     String SETTINGS_MCP_PATHS_SSE = "dubbo.protocol.triple.rest.mcp.path.sse";
+    String SETTINGS_MCP_PATHS_STREAMABLE = "dubbo.protocol.triple.rest.mcp.path.streamable";
     String SETTINGS_MCP_PATHS_MESSAGE = "dubbo.protocol.triple.rest.mcp.path.message";
 
     // MCP service control-related configuration
