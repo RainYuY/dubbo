@@ -112,6 +112,7 @@
     <module>dubbo-demo/dubbo-demo-api</module>
     <module>dubbo-demo/dubbo-demo-spring-boot</module>
     <module>dubbo-demo/dubbo-demo-spring-boot-idl</module>
+    <module>dubbo-demo/dubbo-mcp-server-demo</module>
   </modules>
 
   <scm>

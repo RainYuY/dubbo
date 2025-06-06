@@ -25,6 +25,7 @@ import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
+import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.HttpStatus;
 import org.apache.dubbo.remoting.http12.HttpUtils;
 import org.apache.dubbo.remoting.http12.message.MediaType;
@@ -76,26 +77,25 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
         return null;
     }
 
-    public void handleRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    public void handleRequest(StreamObserver<HttpResult> responseObserver) {
         // Handle the request and return the response
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         if (HttpMethods.isGet(request.method())) {
-            handleGetRequest(responseObserver);
         } else if (HttpMethods.isPost(request.method())) {
             handlePostRequest(responseObserver);
         } else if (HttpMethods.isDelete(request.method())) {
             // TODO: implement DELETE request handling logic
-            handleDeleteRequest(responseObserver);
         }
         return;
     }
 
     public void handleGetRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
         // TODO:implement GET request handling logic
+        responseObserver.onNext(null);
         return;
     }
 
-    public void handlePostRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    public void handlePostRequest(StreamObserver<HttpResult> responseObserver) {
         // streamable 模式下,首先需要确认客户端支持的accept类型
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
@@ -104,10 +104,11 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
                 || !accepts.contains(MediaType.TEXT_EVENT_STREAM.getName())
                 || !accepts.contains(MediaType.APPLICATION_JSON.getName())) {
             // 如果没有包含必须类型，则返回异常
-            response.setBody(JsonUtils.toJson(new McpError("Unsupported accept type")));
-            response.setStatus(HttpStatus.NOT_ACCEPTABLE.getCode());
-            responseObserver.onCompleted();
-            return;
+            responseObserver.onNext(HttpResult.builder()
+                    .header("Content-Type", MediaType.APPLICATION_JSON.getName())
+                    .status(HttpStatus.NOT_ACCEPTABLE.getCode())
+                    .body(JsonUtils.toJson(new McpError("Unsupported accept type")))
+                    .build());
         }
         McpServerSession mcpServerSession = null;
         try {
@@ -117,10 +118,12 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
             // 如果是初始化的场景，则为其创建一个新的session
             if (message instanceof McpSchema.JSONRPCRequest
                     && McpSchema.METHOD_INITIALIZE.equals(((McpSchema.JSONRPCRequest) message).method())) {
-                DubboMcpSessionTransport dubboMcpSessionTransport =
-                        new DubboMcpSessionTransport(responseObserver, objectMapper);
-                mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
+                //                DubboMcpSessionTransport dubboMcpSessionTransport =
+                //                        new DubboMcpSessionTransport(responseObserver, objectMapper);
+                //                mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
                 sessions.put(mcpServerSession.getId(), mcpServerSession);
+                response.setHeader(SESSION_ID_HEADER, mcpServerSession.getId());
+                mcpServerSession.handle(message);
             } else {
                 // 首先检查Header是否有sessionId
                 String sessionId = request.header(SESSION_ID_HEADER);
@@ -142,7 +145,6 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
                 }
                 refreshSessionExpire(mcpServerSession);
             }
-            response.setHeader(SESSION_ID_HEADER, mcpServerSession.getId());
             responseObserver.onCompleted();
         } catch (Exception e) {
             // 如果反序列化失败，则返回异常
