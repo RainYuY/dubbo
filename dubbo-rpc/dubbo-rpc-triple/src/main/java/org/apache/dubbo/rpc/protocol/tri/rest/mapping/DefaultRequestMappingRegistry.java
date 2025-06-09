@@ -169,7 +169,7 @@ public final class DefaultRequestMappingRegistry implements RequestMappingRegist
         try {
             Registration registration = new Registration(mapping, handler);
             for (PathExpression path : mapping.getPathCondition().getExpressions()) {
-                Registration exists = tree.addPath(path, registration);
+                Registration exists = tree.addPath(path, registration, Registration::isMappingOverlap);
                 if (exists == null) {
                     counter.incrementAndGet();
                     if (LOGGER.isDebugEnabled()) {
