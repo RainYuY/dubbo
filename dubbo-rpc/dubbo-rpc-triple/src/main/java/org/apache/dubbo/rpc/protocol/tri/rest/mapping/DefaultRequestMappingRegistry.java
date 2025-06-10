@@ -31,7 +31,6 @@ import org.apache.dubbo.rpc.model.MethodDescriptor;
 import org.apache.dubbo.rpc.model.ReflectionMethodDescriptor;
 import org.apache.dubbo.rpc.model.ReflectionServiceDescriptor;
 import org.apache.dubbo.rpc.model.ServiceDescriptor;
-import org.apache.dubbo.rpc.model.StubServiceDescriptor;
 import org.apache.dubbo.rpc.protocol.tri.DescriptorUtils;
 import org.apache.dubbo.rpc.protocol.tri.TripleProtocol;
 import org.apache.dubbo.rpc.protocol.tri.rest.Messages;
@@ -131,14 +130,6 @@ public final class DefaultRequestMappingRegistry implements RequestMappingRegist
                 consumer.accept((methods) -> {
                     Method method = methods.get(0);
                     MethodDescriptor md = sd.getMethod(method.getName(), method.getParameterTypes());
-                    if (md == null && sd instanceof StubServiceDescriptor) {
-                        String methodName = method.getName();
-                        char firstChar = Character.toUpperCase(methodName.charAt(0));
-                        String upperMethodName = methodName.length() == 1
-                                ? String.valueOf(firstChar)
-                                : firstChar + methodName.substring(1);
-                        md = sd.getMethod(upperMethodName, method.getParameterTypes());
-                    }
                     MethodMeta methodMeta = new MethodMeta(methods, md, serviceMeta);
                     if (!resolver.accept(methodMeta)) {
                         return;

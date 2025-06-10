@@ -35,7 +35,6 @@ import org.apache.dubbo.common.utils.ClassUtils;
 import org.apache.dubbo.common.utils.PojoUtils;
 import org.apache.dubbo.common.utils.ReflectUtils;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.rpc.BaseFilter.Listener;
 import org.apache.dubbo.rpc.Filter;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
@@ -72,7 +71,7 @@ import static org.apache.dubbo.rpc.Constants.GENERIC_KEY;
  * GenericInvokerFilter.
  */
 @Activate(group = CommonConstants.PROVIDER, order = -20000)
-public class GenericFilter implements Filter, Listener, ScopeModelAware {
+public class GenericFilter implements Filter, Filter.Listener, ScopeModelAware {
     private final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(GenericFilter.class);
 
     private ApplicationModel applicationModel;
@@ -94,20 +93,19 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
             String[] types = (String[]) inv.getArguments()[1];
             Object[] args = (Object[]) inv.getArguments()[2];
             try {
-                GenericFilterMethodDescriptor gmd =
-                        findMethodByMethodSignature(invoker.getInterface(), name, types, inv.getServiceModel());
-                Class<?>[] parameterTypes = gmd.getParameterTypes();
+                Method method = findMethodByMethodSignature(invoker.getInterface(), name, types, inv.getServiceModel());
+                Class<?>[] params = method.getParameterTypes();
                 if (args == null) {
-                    args = new Object[parameterTypes.length];
+                    args = new Object[params.length];
                 }
 
                 if (types == null) {
-                    types = new String[parameterTypes.length];
+                    types = new String[params.length];
                 }
 
                 if (args.length != types.length) {
                     throw new RpcException(
-                            "GenericFilter#invoke args.length != types.length, please check your params");
+                            "GenericFilter#invoke args.length != types.length, please check your " + "params");
                 }
                 String generic = inv.getAttachment(GENERIC_KEY);
 
@@ -119,8 +117,7 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
                         || ProtocolUtils.isDefaultGenericSerialization(generic)
                         || ProtocolUtils.isGenericReturnRawResult(generic)) {
                     try {
-                        args = PojoUtils.realize(
-                                args, parameterTypes, gmd.getMethod().getGenericParameterTypes());
+                        args = PojoUtils.realize(args, params, method.getGenericParameterTypes());
                     } catch (Exception e) {
                         logger.error(
                                 LoggerCodeConstants.PROTOCOL_ERROR_DESERIALIZE,
@@ -132,7 +129,7 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
                         throw new RpcException(e);
                     }
                 } else if (ProtocolUtils.isGsonGenericSerialization(generic)) {
-                    args = getGsonGenericArgs(args, gmd.getMethod().getGenericParameterTypes());
+                    args = getGsonGenericArgs(args, method.getGenericParameterTypes());
                 } else if (ProtocolUtils.isJavaGenericSerialization(generic)) {
                     Configuration configuration = ApplicationModel.ofNullable(applicationModel)
                             .modelEnvironment()
@@ -191,7 +188,7 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
                                     .getExtensionLoader(Serialization.class)
                                     .getExtension(GENERIC_SERIALIZATION_PROTOBUF)
                                     .deserialize(null, is)
-                                    .readObject(parameterTypes[0]);
+                                    .readObject(method.getParameterTypes()[0]);
                         } catch (Exception e) {
                             throw new RpcException("Deserialize argument failed.", e);
                         }
@@ -207,10 +204,10 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
                 RpcInvocation rpcInvocation = new RpcInvocation(
                         inv.getTargetServiceUniqueName(),
                         invoker.getUrl().getServiceModel(),
-                        gmd.getMethodName(),
+                        method.getName(),
                         invoker.getInterface().getName(),
                         invoker.getUrl().getProtocolServiceKey(),
-                        gmd.getParameterTypes(),
+                        method.getParameterTypes(),
                         args,
                         inv.getObjectAttachments(),
                         inv.getInvoker(),
@@ -253,10 +250,10 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
         return generic;
     }
 
-    public GenericFilterMethodDescriptor findMethodByMethodSignature(
+    public Method findMethodByMethodSignature(
             Class<?> clazz, String methodName, String[] parameterTypes, ServiceModel serviceModel)
             throws NoSuchMethodException, ClassNotFoundException {
-        GenericFilterMethodDescriptor genericFilterMethodDescriptor;
+        Method method;
         if (parameterTypes == null) {
             List<Method> finded = new ArrayList<>();
             for (Method m : clazz.getMethods()) {
@@ -273,43 +270,35 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
                         methodName, clazz.getName(), finded.size());
                 throw new IllegalStateException(msg);
             }
-            genericFilterMethodDescriptor = new GenericFilterMethodDescriptor(finded.get(0));
+            method = finded.get(0);
         } else {
-            Class<?>[] types = findMethodParameterTypes(parameterTypes);
+            Class<?>[] types = new Class<?>[parameterTypes.length];
+            for (int i = 0; i < parameterTypes.length; i++) {
+                ClassLoader classLoader = ClassUtils.getClassLoader();
+                Map<String, Class<?>> cacheMap = classCache.get(classLoader);
+                if (cacheMap == null) {
+                    cacheMap = new ConcurrentHashMap<>();
+                    classCache.putIfAbsent(classLoader, cacheMap);
+                    cacheMap = classCache.get(classLoader);
+                }
+                types[i] = cacheMap.get(parameterTypes[i]);
+                if (types[i] == null) {
+                    types[i] = ReflectUtils.name2class(parameterTypes[i]);
+                    cacheMap.put(parameterTypes[i], types[i]);
+                }
+            }
             if (serviceModel != null) {
                 MethodDescriptor methodDescriptor =
                         serviceModel.getServiceModel().getMethod(methodName, types);
                 if (methodDescriptor == null) {
-                    throw new NoSuchMethodException("No such method " + methodName + " in service descriptor " + clazz);
+                    throw new NoSuchMethodException("No such method " + methodName + " in class " + clazz);
                 }
-                genericFilterMethodDescriptor = new GenericFilterMethodDescriptor(
-                        methodDescriptor.getMethod(),
-                        methodDescriptor.getMethodName(),
-                        methodDescriptor.getParameterClasses());
+                method = methodDescriptor.getMethod();
             } else {
-                genericFilterMethodDescriptor = new GenericFilterMethodDescriptor(clazz.getMethod(methodName, types));
+                method = clazz.getMethod(methodName, types);
             }
         }
-        return genericFilterMethodDescriptor;
-    }
-
-    private Class<?>[] findMethodParameterTypes(String[] parameterTypes) throws ClassNotFoundException {
-        Class<?>[] types = new Class<?>[parameterTypes.length];
-        for (int i = 0; i < parameterTypes.length; i++) {
-            ClassLoader classLoader = ClassUtils.getClassLoader();
-            Map<String, Class<?>> cacheMap = classCache.get(classLoader);
-            if (cacheMap == null) {
-                cacheMap = new ConcurrentHashMap<>();
-                classCache.putIfAbsent(classLoader, cacheMap);
-                cacheMap = classCache.get(classLoader);
-            }
-            types[i] = cacheMap.get(parameterTypes[i]);
-            if (types[i] == null) {
-                types[i] = ReflectUtils.name2class(parameterTypes[i]);
-                cacheMap.put(parameterTypes[i], types[i]);
-            }
-        }
-        return types;
+        return method;
     }
 
     @Override
@@ -390,34 +379,4 @@ public class GenericFilter implements Filter, Listener, ScopeModelAware {
 
     @Override
     public void onError(Throwable t, Invoker<?> invoker, Invocation invocation) {}
-
-    public static class GenericFilterMethodDescriptor {
-        private final Method method;
-        private final String methodName;
-        private final Class<?>[] parameterTypes;
-
-        public GenericFilterMethodDescriptor(Method method) {
-            this.method = method;
-            this.methodName = method.getName();
-            this.parameterTypes = method.getParameterTypes();
-        }
-
-        public GenericFilterMethodDescriptor(Method method, String methodName, Class<?>[] parameterTypes) {
-            this.method = method;
-            this.methodName = methodName;
-            this.parameterTypes = parameterTypes;
-        }
-
-        public Method getMethod() {
-            return method;
-        }
-
-        public String getMethodName() {
-            return methodName;
-        }
-
-        public Class<?>[] getParameterTypes() {
-            return parameterTypes;
-        }
-    }
 }
