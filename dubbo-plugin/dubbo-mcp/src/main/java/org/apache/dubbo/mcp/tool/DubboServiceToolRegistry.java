@@ -54,7 +54,7 @@ public class DubboServiceToolRegistry {
     private static final ErrorTypeAwareLogger logger =
             LoggerFactory.getErrorTypeAwareLogger(DubboServiceToolRegistry.class);
 
-    private final McpAsyncServer mcpServer;
+    private final List<McpAsyncServer> mcpServers;
     private final DubboOpenApiToolConverter toolConverter;
     private final DubboMcpGenericCaller genericCaller;
     private final McpServiceFilter mcpServiceFilter;
@@ -63,11 +63,11 @@ public class DubboServiceToolRegistry {
     private final ObjectMapper objectMapper;
 
     public DubboServiceToolRegistry(
-            McpAsyncServer mcpServer,
+            List<McpAsyncServer> mcpServers,
             DubboOpenApiToolConverter toolConverter,
             DubboMcpGenericCaller genericCaller,
             McpServiceFilter mcpServiceFilter) {
-        this.mcpServer = mcpServer;
+        this.mcpServers = mcpServers;
         this.toolConverter = toolConverter;
         this.genericCaller = genericCaller;
         this.mcpServiceFilter = mcpServiceFilter;
@@ -149,8 +149,10 @@ public class DubboServiceToolRegistry {
             try {
                 McpServerFeatures.AsyncToolSpecification toolSpec = registeredTools.remove(toolName);
                 if (toolSpec != null) {
-                    mcpServer.removeTool(toolName).block();
-                    unregisteredCount++;
+                    for (McpAsyncServer server : mcpServers) {
+                        server.removeTool(toolName).block();
+                        unregisteredCount++;
+                    }
                 }
             } catch (Exception e) {
                 logger.error(
@@ -196,7 +198,9 @@ public class DubboServiceToolRegistry {
             McpServerFeatures.AsyncToolSpecification toolSpec =
                     createMethodToolSpecification(mcpTool, providerModel, method, url);
 
-            mcpServer.addTool(toolSpec).block();
+            for (McpAsyncServer server : mcpServers) {
+                server.addTool(toolSpec).block();
+            }
             registeredTools.put(toolName, toolSpec);
 
             return toolName;
@@ -245,7 +249,9 @@ public class DubboServiceToolRegistry {
 
                 McpServerFeatures.AsyncToolSpecification toolSpec =
                         createServiceToolSpecification(tool, operation, url);
-                mcpServer.addTool(toolSpec).block();
+                for (McpAsyncServer server : mcpServers) {
+                    server.addTool(toolSpec).block();
+                }
                 registeredTools.put(toolId, toolSpec);
                 toolNames.add(toolId);
 
@@ -454,7 +460,9 @@ public class DubboServiceToolRegistry {
     public void clearRegistry() {
         for (String toolId : registeredTools.keySet()) {
             try {
-                mcpServer.removeTool(toolId).block();
+                for (McpAsyncServer mcpServer : mcpServers) {
+                    mcpServer.removeTool(toolId).block();
+                }
             } catch (Exception e) {
                 logger.error(
                         LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,

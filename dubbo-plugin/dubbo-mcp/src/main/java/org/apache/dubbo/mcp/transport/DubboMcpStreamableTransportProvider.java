@@ -22,12 +22,15 @@ import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.IOUtils;
 import org.apache.dubbo.common.utils.JsonUtils;
 import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.remoting.http12.HttpHeaderNames;
+import org.apache.dubbo.remoting.http12.HttpHeaders;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
 import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.HttpStatus;
 import org.apache.dubbo.remoting.http12.HttpUtils;
+import org.apache.dubbo.remoting.http12.ServerHttpChannelObserver;
 import org.apache.dubbo.remoting.http12.message.MediaType;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.rpc.RpcContext;
@@ -48,7 +51,7 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
 
     private final ObjectMapper objectMapper;
 
-    public static final String SESSION_ID_HEADER = "Mcp-Session-Id";
+    public static final String SESSION_ID_HEADER = "mcp-session-id";
 
     private final ExpiringMap<String, McpServerSession> sessions = new ExpiringMap<>(30 * 60, 30);
 
@@ -77,25 +80,47 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
         return null;
     }
 
-    public void handleRequest(StreamObserver<HttpResult> responseObserver) {
+    public void handleRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
         // Handle the request and return the response
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         if (HttpMethods.isGet(request.method())) {
+
         } else if (HttpMethods.isPost(request.method())) {
             handlePostRequest(responseObserver);
-        } else if (HttpMethods.isDelete(request.method())) {
-            // TODO: implement DELETE request handling logic
         }
         return;
     }
 
-    public void handleGetRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    public void handleGetRequest(StreamObserver<ServerSentEvent<Object>> responseObserver) {
+        String sessionId = RpcContext.getServiceContext().getRequest(HttpRequest.class).header(SESSION_ID_HEADER);
+        if (StringUtils.isBlank(sessionId)) {
+            // 如果没有sessionId，则返回异常
+            responseObserver.onError(HttpResult.builder()
+                    .header("Content-Type", MediaType.APPLICATION_JSON.getName())
+                    .status(HttpStatus.BAD_REQUEST.getCode())
+                    .body(JsonUtils.toJson(new McpError("Session ID missing in request header").getJsonRpcError()))
+                    .build()
+                    .toPayload());
+            responseObserver.onCompleted();
+            return;
+        }
+        if (!sessions.containsKey(sessionId)) {
+            // 如果没有找到对应的session，则返回异常
+            responseObserver.onError(HttpResult.builder()
+                    .header("Content-Type", MediaType.APPLICATION_JSON.getName())
+                    .status(HttpStatus.NOT_FOUND.getCode())
+                    .body(JsonUtils.toJson(new McpError("Session not found").getJsonRpcError()))
+                    .build()
+                    .toPayload());
+            responseObserver.onCompleted();
+            return;
+        }
         // TODO:implement GET request handling logic
         responseObserver.onNext(null);
         return;
     }
 
-    public void handlePostRequest(StreamObserver<HttpResult> responseObserver) {
+    public void handlePostRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
         // streamable 模式下,首先需要确认客户端支持的accept类型
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
@@ -104,11 +129,14 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
                 || !accepts.contains(MediaType.TEXT_EVENT_STREAM.getName())
                 || !accepts.contains(MediaType.APPLICATION_JSON.getName())) {
             // 如果没有包含必须类型，则返回异常
-            responseObserver.onNext(HttpResult.builder()
+            responseObserver.onError(HttpResult.builder()
                     .header("Content-Type", MediaType.APPLICATION_JSON.getName())
                     .status(HttpStatus.NOT_ACCEPTABLE.getCode())
-                    .body(JsonUtils.toJson(new McpError("Unsupported accept type")))
-                    .build());
+                    .body(JsonUtils.toJson(new McpError("Unsupported accept type").getJsonRpcError()))
+                    .build()
+                    .toPayload());
+            responseObserver.onCompleted();
+            return;
         }
         McpServerSession mcpServerSession = null;
         try {
@@ -118,12 +146,16 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
             // 如果是初始化的场景，则为其创建一个新的session
             if (message instanceof McpSchema.JSONRPCRequest
                     && McpSchema.METHOD_INITIALIZE.equals(((McpSchema.JSONRPCRequest) message).method())) {
-                //                DubboMcpSessionTransport dubboMcpSessionTransport =
-                //                        new DubboMcpSessionTransport(responseObserver, objectMapper);
-                //                mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
+                DubboMcpSessionTransport dubboMcpSessionTransport =
+                        new DubboMcpSessionTransport(responseObserver, objectMapper);
+                mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
                 sessions.put(mcpServerSession.getId(), mcpServerSession);
-                response.setHeader(SESSION_ID_HEADER, mcpServerSession.getId());
-                mcpServerSession.handle(message);
+                if (responseObserver instanceof ServerHttpChannelObserver){
+                    McpServerSession finalMcpServerSession = mcpServerSession;
+                    ((ServerHttpChannelObserver) responseObserver).addHeadersCustomizer((hs, t) -> ((HttpHeaders)hs).add(
+                            SESSION_ID_HEADER, finalMcpServerSession.getId()
+                    ));
+                }
             } else {
                 // 首先检查Header是否有sessionId
                 String sessionId = request.header(SESSION_ID_HEADER);
@@ -145,11 +177,16 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
                 }
                 refreshSessionExpire(mcpServerSession);
             }
+            mcpServerSession.handle(message).block();
             responseObserver.onCompleted();
         } catch (Exception e) {
             // 如果反序列化失败，则返回异常
-            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
-            response.setBody(JsonUtils.toJson(new McpError("Invalid message format").getJsonRpcError()));
+            responseObserver.onError(HttpResult.builder()
+                    .header("Content-Type", MediaType.APPLICATION_JSON.getName())
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR.getCode())
+                    .body(JsonUtils.toJson(new McpError("Invalid message format").getJsonRpcError()))
+                    .build()
+                    .toPayload());
             responseObserver.onCompleted();
             return;
         }

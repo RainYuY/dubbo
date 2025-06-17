@@ -7,7 +7,7 @@ dubbo:
     qos-enable: false
   protocol:
     name: tri
-    port: 50053
+    port: 50055
     triple:
       verbose: true
       rest:

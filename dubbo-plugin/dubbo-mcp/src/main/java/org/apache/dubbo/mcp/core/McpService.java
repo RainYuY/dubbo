@@ -18,7 +18,6 @@ package org.apache.dubbo.mcp.core;
 
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.remoting.http12.HttpMethods;
-import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.remoting.http12.rest.Mapping;
 
@@ -36,5 +35,5 @@ public interface McpService {
     void post();
 
     @Mapping(value = "//${" + SETTINGS_MCP_PATHS_STREAMABLE + ":/mcp}")
-    void streamable(StreamObserver<HttpResult> responseObserver);
+    void streamable(StreamObserver<ServerSentEvent<String>> responseObserver);
 }

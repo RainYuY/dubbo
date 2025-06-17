@@ -40,7 +40,9 @@ import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.model.ProviderModel;
 import org.apache.dubbo.rpc.protocol.tri.rest.openapi.DefaultOpenAPIService;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -64,7 +66,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     private static DubboMcpStreamableTransportProvider dubboMcpStreamableTransportProvider;
 
-    private McpAsyncServer mcpAsyncServer;
+    private List<McpAsyncServer> mcpAsyncServers = new ArrayList<>();
 
     @Override
     public void onInitialize(ApplicationModel scopeModel) {}
@@ -101,9 +103,13 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             McpSchema.ServerCapabilities serverCapabilities =
                     new McpSchema.ServerCapabilities(null, null, null, null, toolCapabilities);
 
-            mcpAsyncServer = McpServer.async(dubboMcpStreamableTransportProvider)
+            mcpAsyncServers.add(McpServer.async(dubboMcpSseTransportProvider)
                     .capabilities(serverCapabilities)
-                    .build();
+                    .build());
+
+            mcpAsyncServers.add(McpServer.async(dubboMcpStreamableTransportProvider)
+                    .capabilities(serverCapabilities)
+                    .build());
 
             FrameworkModel frameworkModel = applicationModel.getFrameworkModel();
             DefaultOpenAPIService defaultOpenAPIService = new DefaultOpenAPIService(frameworkModel);
@@ -112,7 +118,8 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
             DubboMcpGenericCaller genericCaller = new DubboMcpGenericCaller(applicationModel);
 
-            toolRegistry = new DubboServiceToolRegistry(mcpAsyncServer, toolConverter, genericCaller, mcpServiceFilter);
+            toolRegistry =
+                    new DubboServiceToolRegistry(mcpAsyncServers, toolConverter, genericCaller, mcpServiceFilter);
 
             applicationModel.getBeanFactory().registerBean(toolRegistry);
 
@@ -149,8 +156,10 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     @Override
     public void onStopped(ApplicationModel applicationModel) {
-        if (mcpEnable && mcpAsyncServer != null) {
-            mcpAsyncServer.close();
+        if (mcpEnable && mcpAsyncServers != null) {
+            for (McpAsyncServer mcpAsyncServer : mcpAsyncServers) {
+                mcpAsyncServer.close();
+            }
         }
     }
 

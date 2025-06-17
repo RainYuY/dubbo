@@ -79,8 +79,13 @@ public final class ServerSentEventEncoder implements HttpMessageEncoder {
 
     private void encodeData(StringBuilder sb, Object data, Charset charset) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream(256);
-        httpMessageEncoder.encode(bos, data, charset);
-        String dataStr = new String(bos.toByteArray(), charset);
+        String dataStr;
+        if (data instanceof String){
+            dataStr = (String) data;
+        } else {
+            httpMessageEncoder.encode(bos, data, charset);
+            dataStr = new String(bos.toByteArray(), charset);
+        }
         List<String> lines = StringUtils.splitToList(dataStr, '\n');
         for (int i = 0, size = lines.size(); i < size; i++) {
             appendField(sb, "data", lines.get(i));

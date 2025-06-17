@@ -20,7 +20,6 @@ import org.apache.dubbo.common.resource.Disposable;
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
 import org.apache.dubbo.mcp.transport.DubboMcpStreamableTransportProvider;
-import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 
 public class McpServiceImpl implements McpService, Disposable {
@@ -46,7 +45,7 @@ public class McpServiceImpl implements McpService, Disposable {
     }
 
     @Override
-    public void streamable(StreamObserver<HttpResult> responseObserver) {
+    public void streamable(StreamObserver<ServerSentEvent<String>> responseObserver) {
         if (streamableTransportProvider == null) {
             streamableTransportProvider = getStreamableTransportProvider();
         }
