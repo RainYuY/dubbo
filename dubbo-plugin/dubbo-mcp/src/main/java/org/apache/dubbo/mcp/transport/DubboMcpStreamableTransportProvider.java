@@ -84,6 +84,7 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
         // Handle the request and return the response
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         if (HttpMethods.isGet(request.method())) {
+            handleGetRequest(responseObserver);
 
         } else if (HttpMethods.isPost(request.method())) {
             handlePostRequest(responseObserver);
@@ -91,7 +92,7 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
         return;
     }
 
-    public void handleGetRequest(StreamObserver<ServerSentEvent<Object>> responseObserver) {
+    public void handleGetRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
         String sessionId = RpcContext.getServiceContext().getRequest(HttpRequest.class).header(SESSION_ID_HEADER);
         if (StringUtils.isBlank(sessionId)) {
             // 如果没有sessionId，则返回异常
