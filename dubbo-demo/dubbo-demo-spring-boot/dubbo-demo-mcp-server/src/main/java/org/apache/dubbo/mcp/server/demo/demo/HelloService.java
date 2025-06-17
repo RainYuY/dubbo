@@ -16,13 +16,16 @@
  */
 package org.apache.dubbo.mcp.server.demo.demo;
 
+import org.apache.dubbo.mcp.annotations.McpTool;
 import org.apache.dubbo.remoting.http12.rest.Mapping;
 
 @Mapping("")
 public interface HelloService {
+    @McpTool
     @Mapping("/hello")
     String sayHello(String name);
 
+    @McpTool
     @Mapping("/greetComplex")
     ComplexResponse greetComplex(ComplexRequest request);
 }

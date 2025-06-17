@@ -116,8 +116,11 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
             responseObserver.onCompleted();
             return;
         }
-        // TODO:implement GET request handling logic
-        responseObserver.onNext(null);
+        DubboMcpSessionTransport dubboMcpSessionTransport =
+                new DubboMcpSessionTransport(responseObserver, objectMapper);
+        McpServerSession mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
+        sessions.put(mcpServerSession.getId(), mcpServerSession);
+        mcpServerSession.sendNotification("tools").block();
         return;
     }
 

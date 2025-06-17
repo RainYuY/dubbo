@@ -18,7 +18,7 @@ package org.apache.dubbo.mcp.server.demo.demo;
 
 import org.apache.dubbo.config.annotation.DubboService;
 
-@DubboService
+@DubboService(mcpEnabled = true)
 public class HelloServiceImpl implements HelloService {
     @Override
     public String sayHello(String name) {
