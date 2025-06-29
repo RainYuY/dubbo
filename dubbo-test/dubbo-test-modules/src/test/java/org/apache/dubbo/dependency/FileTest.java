@@ -55,6 +55,7 @@ class FileTest {
         ignoredModules.add(Pattern.compile("dubbo-demo.*"));
         ignoredModules.add(Pattern.compile("dubbo-annotation-processor"));
         ignoredModules.add(Pattern.compile("dubbo-config-spring6"));
+        ignoredModules.add(Pattern.compile("dubbo-spring6-security"));
         ignoredModules.add(Pattern.compile("dubbo-spring-boot-3-autoconfigure"));
         ignoredModules.add(Pattern.compile("dubbo-plugin-loom.*"));
         ignoredModules.add(Pattern.compile("dubbo-mcp"));
@@ -75,6 +76,7 @@ class FileTest {
         ignoredModulesInDubboAll.add(Pattern.compile(".*spring-boot.*"));
         ignoredModulesInDubboAll.add(Pattern.compile("dubbo-maven-plugin"));
 
+        ignoredModulesInDubboAllShade.add(Pattern.compile("dubbo-spring6-security"));
         ignoredModulesInDubboAllShade.add(Pattern.compile("dubbo-plugin-loom"));
         ignoredModulesInDubboAllShade.add(Pattern.compile("dubbo-mcp"));
     }
