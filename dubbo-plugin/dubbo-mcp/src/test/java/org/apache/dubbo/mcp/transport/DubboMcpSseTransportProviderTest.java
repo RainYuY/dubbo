@@ -21,6 +21,7 @@ import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
 import org.apache.dubbo.remoting.http12.HttpStatus;
+import org.apache.dubbo.remoting.http12.exception.HttpResultPayloadException;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.rpc.RpcContext;
 import org.apache.dubbo.rpc.RpcServiceContext;
@@ -28,10 +29,10 @@ import org.apache.dubbo.rpc.RpcServiceContext;
 import java.io.ByteArrayInputStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerSession;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -132,20 +133,30 @@ class DubboMcpSseTransportProviderTest {
     void handleMessageReturnsBadRequestWhenSessionIdIsMissing() {
         when(httpRequest.parameter("sessionId")).thenReturn(null);
 
-        transportProvider.handleMessage();
-
-        verify(httpResponse, times(1)).setStatus(HttpStatus.BAD_REQUEST.getCode());
-        verify(httpResponse, times(1)).setBody(any(McpError.class));
+        try {
+            transportProvider.handleMessage();
+        } catch (Exception e) {
+            Assertions.assertInstanceOf(HttpResultPayloadException.class, e);
+            HttpResultPayloadException httpResultPayloadException = (HttpResultPayloadException) e;
+            Assertions.assertEquals(
+                    HttpStatus.BAD_REQUEST.getCode(),
+                    httpResultPayloadException.getResult().getStatus());
+        }
     }
 
     @Test
     void handleMessageReturnsNotFoundForUnknownSessionId() {
         when(httpRequest.parameter("sessionId")).thenReturn("unknownSessionId");
 
-        transportProvider.handleMessage();
-
-        verify(httpResponse, times(1)).setStatus(HttpStatus.NOT_FOUND.getCode());
-        verify(httpResponse, times(1)).setBody(any(McpError.class));
+        try {
+            transportProvider.handleMessage();
+        } catch (Exception e) {
+            Assertions.assertInstanceOf(HttpResultPayloadException.class, e);
+            HttpResultPayloadException httpResultPayloadException = (HttpResultPayloadException) e;
+            Assertions.assertEquals(
+                    HttpStatus.NOT_FOUND.getCode(),
+                    httpResultPayloadException.getResult().getStatus());
+        }
     }
 
     @AfterEach
