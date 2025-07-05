@@ -24,6 +24,7 @@ import org.apache.dubbo.common.utils.IOUtils;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
+import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.HttpStatus;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.rpc.RpcContext;
@@ -116,16 +117,14 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
         String sessionId = request.parameter("sessionId");
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
         if (StringUtil.isNullOrEmpty(sessionId)) {
-            response.setStatus(HttpStatus.BAD_REQUEST.getCode());
-            response.setBody(new McpError("Session ID missing in message endpoint"));
-            return;
+            throw HttpResult.of(HttpStatus.BAD_REQUEST, new McpError("Session ID missing in message endpoint"))
+                    .toPayload();
         }
 
         McpServerSession session = sessions.get(sessionId);
         if (session == null) {
-            response.setStatus(HttpStatus.NOT_FOUND.getCode());
-            response.setBody(new McpError("Unknown sessionId: " + sessionId));
-            return;
+            throw HttpResult.of(HttpStatus.NOT_FOUND, "Unknown sessionId: " + sessionId)
+                    .toPayload();
         }
         refreshSessionExpire(session);
         try {
@@ -134,9 +133,8 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
             session.handle(message).block();
             response.setStatus(HttpStatus.OK.getCode());
         } catch (IOException e) {
-            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
-            response.setBody(new McpError("Invalid message format"));
-            return;
+            throw HttpResult.of(HttpStatus.INTERNAL_SERVER_ERROR, new McpError("Invalid message format"))
+                    .toPayload();
         }
     }
 
