@@ -45,10 +45,10 @@ import java.util.function.Consumer;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http3.Http3ServerConnectionHandler;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.incubator.codec.http3.Http3ServerConnectionHandler;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 import static org.apache.dubbo.remoting.http3.netty4.Constants.PIPELINE_CONFIGURATOR_KEY;
 

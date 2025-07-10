@@ -22,8 +22,8 @@ import org.apache.dubbo.remoting.transport.netty4.ChannelAddressAccessor;
 import java.net.InetSocketAddress;
 
 import io.netty.channel.Channel;
-import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 
 @Activate(order = -100, onClass = "io.netty.incubator.codec.quic.QuicChannel")
 public class Http3ChannelAddressAccessor implements ChannelAddressAccessor {
