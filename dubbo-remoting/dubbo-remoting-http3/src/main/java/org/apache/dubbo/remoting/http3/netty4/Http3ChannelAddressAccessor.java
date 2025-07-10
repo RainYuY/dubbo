@@ -25,7 +25,7 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 
-@Activate(order = -100, onClass = "io.netty.incubator.codec.quic.QuicChannel")
+@Activate(order = -100, onClass = "io.netty.handler.codec.quic.QuicChannel")
 public class Http3ChannelAddressAccessor implements ChannelAddressAccessor {
 
     @Override

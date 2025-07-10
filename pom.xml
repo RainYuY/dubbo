@@ -164,12 +164,13 @@
     <maven_gmavenplus_version>3.0.2</maven_gmavenplus_version>
 
     <!-- For unify spring boot 3 version -->
-    <spring-6.version>6.2.7</spring-6.version>
+    <spring-6.version>6.2.8</spring-6.version>
+    <spring-security-6.version>6.5.1</spring-security-6.version>
     <spring-boot-3.version>3.5.0</spring-boot-3.version>
 
     <protobuf-protoc_version>3.22.3</protobuf-protoc_version>
     <grpc_version>1.54.0</grpc_version>
-    <spotless-maven-plugin.version>2.44.4</spotless-maven-plugin.version>
+    <spotless-maven-plugin.version>2.44.5</spotless-maven-plugin.version>
     <dubbo-shared-resources.version>1.0.0</dubbo-shared-resources.version>
     <palantirJavaFormat.version>2.38.0</palantirJavaFormat.version>
     <revision>3.3.6-SNAPSHOT</revision>
@@ -495,6 +496,7 @@
       </activation>
       <modules>
         <module>dubbo-spring-boot-project/dubbo-spring-boot-3-autoconfigure</module>
+        <module>dubbo-plugin/dubbo-spring6-security</module>
       </modules>
     </profile>
     <!-- jacoco: mvn validate -Pjacoco  -->
@@ -644,6 +646,7 @@
       <id>release</id>
       <modules>
         <module>dubbo-spring-boot-project/dubbo-spring-boot-3-autoconfigure</module>
+        <module>dubbo-plugin/dubbo-spring6-security</module>
         <module>dubbo-plugin/dubbo-plugin-loom</module>
         <module>dubbo-distribution/dubbo-all</module>
         <module>dubbo-distribution/dubbo-all-shaded</module>
