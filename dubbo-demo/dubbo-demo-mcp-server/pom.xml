@@ -25,6 +25,10 @@
   </parent>
   <artifactId>dubbo-demo-mcp-server</artifactId>
 
+  <properties>
+    <spring-boot-maven-plugin.version>2.7.18</spring-boot-maven-plugin.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.dubbo</groupId>
@@ -117,6 +121,7 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring-boot-maven-plugin.version}</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
