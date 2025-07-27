@@ -31,7 +31,6 @@
     <module>dubbo-demo-spring-boot-provider</module>
     <module>dubbo-demo-spring-boot-interface</module>
     <module>dubbo-demo-spring-boot-servlet</module>
-    <module>dubbo-demo-mcp-server</module>
   </modules>
 
   <properties>
