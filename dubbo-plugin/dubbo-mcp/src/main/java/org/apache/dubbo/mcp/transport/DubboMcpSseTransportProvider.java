@@ -109,7 +109,6 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
         } else if (HttpMethods.isPost(request.method())) {
             handleMessage();
         }
-        return;
     }
 
     public void handleMessage() {
