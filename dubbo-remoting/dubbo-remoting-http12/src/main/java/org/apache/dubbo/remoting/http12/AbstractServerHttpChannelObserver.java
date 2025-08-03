@@ -188,7 +188,7 @@ public abstract class AbstractServerHttpChannelObserver<H extends HttpChannel> i
     }
 
     protected final void sendMetadata(HttpMetadata metadata) {
-        if (headerSent){
+        if (headerSent) {
             return;
         }
         getHttpChannel().writeHeader(metadata);

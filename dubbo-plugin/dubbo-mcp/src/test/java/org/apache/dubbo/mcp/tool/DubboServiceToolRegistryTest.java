@@ -22,6 +22,7 @@ import org.apache.dubbo.rpc.model.ProviderModel;
 import org.apache.dubbo.rpc.model.ServiceDescriptor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import io.modelcontextprotocol.server.McpAsyncServer;
@@ -61,7 +62,8 @@ class DubboServiceToolRegistryTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        registry = new DubboServiceToolRegistry(mcpServer, toolConverter, genericCaller, mcpServiceFilter);
+        registry = new DubboServiceToolRegistry(
+                Collections.singletonList(mcpServer), toolConverter, genericCaller, mcpServiceFilter);
     }
 
     @Test

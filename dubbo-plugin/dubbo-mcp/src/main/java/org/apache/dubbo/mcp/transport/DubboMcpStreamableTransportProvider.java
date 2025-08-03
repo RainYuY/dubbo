@@ -22,7 +22,6 @@ import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.IOUtils;
 import org.apache.dubbo.common.utils.JsonUtils;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.remoting.http12.HttpHeaderNames;
 import org.apache.dubbo.remoting.http12.HttpHeaders;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
@@ -93,7 +92,8 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
     }
 
     public void handleGetRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
-        String sessionId = RpcContext.getServiceContext().getRequest(HttpRequest.class).header(SESSION_ID_HEADER);
+        String sessionId =
+                RpcContext.getServiceContext().getRequest(HttpRequest.class).header(SESSION_ID_HEADER);
         if (StringUtils.isBlank(sessionId)) {
             // 如果没有sessionId，则返回异常
             responseObserver.onError(HttpResult.builder()
@@ -154,11 +154,10 @@ public class DubboMcpStreamableTransportProvider implements McpServerTransportPr
                         new DubboMcpSessionTransport(responseObserver, objectMapper);
                 mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
                 sessions.put(mcpServerSession.getId(), mcpServerSession);
-                if (responseObserver instanceof ServerHttpChannelObserver){
+                if (responseObserver instanceof ServerHttpChannelObserver) {
                     McpServerSession finalMcpServerSession = mcpServerSession;
-                    ((ServerHttpChannelObserver) responseObserver).addHeadersCustomizer((hs, t) -> ((HttpHeaders)hs).add(
-                            SESSION_ID_HEADER, finalMcpServerSession.getId()
-                    ));
+                    ((ServerHttpChannelObserver) responseObserver).addHeadersCustomizer((hs, t) -> ((HttpHeaders) hs)
+                            .add(SESSION_ID_HEADER, finalMcpServerSession.getId()));
                 }
             } else {
                 // 首先检查Header是否有sessionId

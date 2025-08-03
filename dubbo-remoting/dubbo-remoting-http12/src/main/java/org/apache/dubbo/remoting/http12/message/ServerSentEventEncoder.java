@@ -80,7 +80,7 @@ public final class ServerSentEventEncoder implements HttpMessageEncoder {
     private void encodeData(StringBuilder sb, Object data, Charset charset) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream(256);
         String dataStr;
-        if (data instanceof String){
+        if (data instanceof String) {
             dataStr = (String) data;
         } else {
             httpMessageEncoder.encode(bos, data, charset);
