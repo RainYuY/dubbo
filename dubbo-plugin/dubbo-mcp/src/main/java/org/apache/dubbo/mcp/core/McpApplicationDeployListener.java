@@ -91,7 +91,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             McpSchema.ServerCapabilities.ToolCapabilities toolCapabilities =
                     new McpSchema.ServerCapabilities.ToolCapabilities(true);
             McpSchema.ServerCapabilities serverCapabilities =
-                    new McpSchema.ServerCapabilities(null, null, null, null, toolCapabilities);
+                    new McpSchema.ServerCapabilities(null, null, null, null, null, toolCapabilities);
 
             mcpAsyncServer = McpServer.async(dubboMcpSseTransportProvider)
                     .capabilities(serverCapabilities)
