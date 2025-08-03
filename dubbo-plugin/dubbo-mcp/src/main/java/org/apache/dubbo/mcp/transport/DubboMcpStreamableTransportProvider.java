@@ -1,10 +1,13 @@
 package org.apache.dubbo.mcp.transport;
 
 import org.apache.dubbo.common.stream.StreamObserver;
+import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.rpc.RpcContext;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.spec.McpStreamableServerSession;
 import io.modelcontextprotocol.spec.McpStreamableServerSession.Factory;
 import io.modelcontextprotocol.spec.McpStreamableServerTransportProvider;
 import reactor.core.publisher.Mono;
@@ -16,9 +19,21 @@ import reactor.core.publisher.Mono;
  */
 public class DubboMcpStreamableTransportProvider implements McpStreamableServerTransportProvider {
 
+    private Factory sessionFactory;
+
+    private final ObjectMapper objectMapper;
+
+    public static final String SESSION_ID_HEADER = "mcp-session-id";
+
+
+    public DubboMcpStreamableTransportProvider(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+
     @Override
     public void setSessionFactory(Factory sessionFactory) {
-
+        this.sessionFactory = sessionFactory;
     }
 
     @Override
@@ -28,7 +43,6 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
     @Override
     public void close() {
-        McpStreamableServerTransportProvider.super.close();
     }
 
     @Override
@@ -36,12 +50,25 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
         return null;
     }
 
-    public void handleRequest(StreamObserver<ServerSentEvent<String>> responseObserver){
+    public void handleRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
+        // Handle the request and return the response
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
-        request.method();
+        if (HttpMethods.isGet(request.method())) {
+            handleGet(responseObserver);
+
+        } else if (HttpMethods.isPost(request.method())) {
+            handlePost(responseObserver);
+        }
+        return;
     }
 
     private void handleGet(StreamObserver<ServerSentEvent<String>> responseObserver){
+        HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
+        // check header
+
+    }
+
+    private void handlePost(StreamObserver<ServerSentEvent<String>> responseObserver){
 
     }
 }
