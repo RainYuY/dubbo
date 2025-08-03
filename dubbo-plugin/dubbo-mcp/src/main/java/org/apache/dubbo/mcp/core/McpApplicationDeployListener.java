@@ -34,6 +34,7 @@ import org.apache.dubbo.mcp.tool.DubboMcpGenericCaller;
 import org.apache.dubbo.mcp.tool.DubboOpenApiToolConverter;
 import org.apache.dubbo.mcp.tool.DubboServiceToolRegistry;
 import org.apache.dubbo.mcp.transport.DubboMcpSseTransportProvider;
+import org.apache.dubbo.mcp.transport.DubboMcpStreamableTransportProvider;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.model.ProviderModel;
@@ -61,6 +62,8 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     private static DubboMcpSseTransportProvider dubboMcpSseTransportProvider;
 
+    private static DubboMcpStreamableTransportProvider dubboMcpStreamableTransportProvider;
+
     private McpAsyncServer mcpAsyncServer;
 
     @Override
@@ -71,6 +74,10 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
 
     public static DubboMcpSseTransportProvider getDubboMcpSseTransportProvider() {
         return dubboMcpSseTransportProvider;
+    }
+
+    public static DubboMcpStreamableTransportProvider getDubboMcpStreamableTransportProvider() {
+        return dubboMcpStreamableTransportProvider;
     }
 
     @Override
