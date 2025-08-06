@@ -1,4 +1,3 @@
-// DubboMcpStreamableTransportProvider.java
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -17,8 +16,6 @@
  */
 package org.apache.dubbo.mcp.transport;
 
-import io.modelcontextprotocol.spec.McpServerSession;
-
 import org.apache.dubbo.cache.support.expiring.ExpiringMap;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
@@ -26,15 +23,12 @@ import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.IOUtils;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.remoting.http12.HttpHeaderNames;
-import org.apache.dubbo.remoting.http12.HttpHeaders;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
 import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.HttpStatus;
 import org.apache.dubbo.remoting.http12.HttpUtils;
-import org.apache.dubbo.remoting.http12.ServerHttpChannelObserver;
 import org.apache.dubbo.remoting.http12.message.MediaType;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.rpc.RpcContext;
@@ -43,15 +37,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpStreamableServerTransport;
 import io.modelcontextprotocol.spec.McpStreamableServerSession;
 import io.modelcontextprotocol.spec.McpStreamableServerSession.Factory;
+import io.modelcontextprotocol.spec.McpStreamableServerTransport;
 import io.modelcontextprotocol.spec.McpStreamableServerTransportProvider;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -143,8 +136,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
         // check Accept header
         List<String> accepts = HttpUtils.parseAccept(request.accept());
-        if (CollectionUtils.isEmpty(accepts) || (!accepts.contains(MediaType.TEXT_EVENT_STREAM.getName())
-                && !accepts.contains(MediaType.APPLICATION_JSON.getName()))) {
+        if (CollectionUtils.isEmpty(accepts)
+                || (!accepts.contains(MediaType.TEXT_EVENT_STREAM.getName())
+                        && !accepts.contains(MediaType.APPLICATION_JSON.getName()))) {
             badRequestErrors.add("text/event-stream or application/json required in Accept header");
         }
 
@@ -199,8 +193,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
         try {
             // Check Accept header
             List<String> accepts = HttpUtils.parseAccept(request.accept());
-            if (CollectionUtils.isEmpty(accepts) || (!accepts.contains(MediaType.TEXT_EVENT_STREAM.getName())
-                    && !accepts.contains(MediaType.APPLICATION_JSON.getName()))) {
+            if (CollectionUtils.isEmpty(accepts)
+                    || (!accepts.contains(MediaType.TEXT_EVENT_STREAM.getName())
+                            && !accepts.contains(MediaType.APPLICATION_JSON.getName()))) {
                 badRequestErrors.add("text/event-stream or application/json required in Accept header");
             }
 
@@ -228,9 +223,12 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 }
 
                 // Create new session
-                McpSchema.InitializeRequest initializeRequest = objectMapper.convertValue(((McpSchema.JSONRPCRequest) message).params(), new TypeReference<McpSchema.InitializeRequest>() {});
+                McpSchema.InitializeRequest initializeRequest = objectMapper.convertValue(
+                        ((McpSchema.JSONRPCRequest) message).params(),
+                        new TypeReference<McpSchema.InitializeRequest>() {});
 
-                McpStreamableServerSession.McpStreamableServerSessionInit init = sessionFactory.startSession(initializeRequest);
+                McpStreamableServerSession.McpStreamableServerSessionInit init =
+                        sessionFactory.startSession(initializeRequest);
                 session = init.session();
                 sessions.put(session.getId(), session);
 
@@ -241,7 +239,8 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                     response.setHeader(SESSION_ID_HEADER, session.getId());
                     response.setStatus(HttpStatus.OK.getCode());
 
-                    String jsonResponse = objectMapper.writeValueAsString(new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION, ((McpSchema.JSONRPCRequest) message).id(), initResult, null));
+                    String jsonResponse = objectMapper.writeValueAsString(new McpSchema.JSONRPCResponse(
+                            McpSchema.JSONRPC_VERSION, ((McpSchema.JSONRPCRequest) message).id(), initResult, null));
 
                     if (responseObserver != null) {
                         responseObserver.onNext(ServerSentEvent.<String>builder()
@@ -334,8 +333,10 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 response.setHeader("Access-Control-Allow-Origin", "*");
 
                 // Handle request stream
-                DubboMcpSessionTransport sessionTransport = new DubboMcpSessionTransport(responseObserver, objectMapper);
-                session.responseStream((McpSchema.JSONRPCRequest) message, sessionTransport).block();
+                DubboMcpSessionTransport sessionTransport =
+                        new DubboMcpSessionTransport(responseObserver, objectMapper);
+                session.responseStream((McpSchema.JSONRPCRequest) message, sessionTransport)
+                        .block();
             } else {
                 response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
                 response.setBody(new McpError("Unknown message type").getJsonRpcError());
@@ -467,9 +468,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                                 .build());
                     }
                 } catch (Exception e) {
-                    if (responseObserver != null) {
-                        responseObserver.onError(e);
-                    }
+                    responseObserver.onError(e);
                 }
             });
         }
@@ -488,9 +487,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                         responseObserver.onNext(event);
                     }
                 } catch (Exception e) {
-                    if (responseObserver != null) {
-                        responseObserver.onError(e);
-                    }
+                    responseObserver.onError(e);
                 }
             });
         }

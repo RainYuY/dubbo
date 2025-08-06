@@ -24,6 +24,7 @@ public interface McpConstant {
     String SETTINGS_MCP_PREFIX = "dubbo.protocol.triple.rest.mcp";
     String SETTINGS_MCP_ENABLE = "dubbo.protocol.triple.rest.mcp.enabled";
     String SETTINGS_MCP_PORT = "dubbo.protocol.triple.rest.mcp.port";
+    String SETTINGS_MCP_PROTOCOL = "dubbo.protocol.triple.rest.mcp.protocol";
     String SETTINGS_MCP_DEFAULT_ENABLED = "dubbo.protocol.triple.rest.mcp.default.enabled";
     String SETTINGS_MCP_INCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.include-patterns";
     String SETTINGS_MCP_EXCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.exclude-patterns";

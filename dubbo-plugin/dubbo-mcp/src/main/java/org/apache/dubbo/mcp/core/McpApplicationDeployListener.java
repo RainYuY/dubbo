@@ -55,10 +55,11 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     private static final ErrorTypeAwareLogger logger =
             LoggerFactory.getErrorTypeAwareLogger(McpApplicationDeployListener.class);
     private DubboServiceToolRegistry toolRegistry;
-    private McpServiceFilter mcpServiceFilter;
     private boolean mcpEnable = true;
 
-    private volatile ServiceConfig<McpSseService> serviceConfig;
+    private volatile ServiceConfig<McpSseService> sseServiceConfig;
+
+    private volatile ServiceConfig<McpStreamableService> streamableServiceConfig;
 
     private static DubboMcpSseTransportProvider dubboMcpSseTransportProvider;
 
@@ -92,17 +93,27 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             logger.info("Initializing MCP server and dynamic service registration");
 
             // Initialize service filter
-            mcpServiceFilter = new McpServiceFilter(applicationModel);
+            McpServiceFilter mcpServiceFilter = new McpServiceFilter(applicationModel);
 
-            dubboMcpSseTransportProvider = new DubboMcpSseTransportProvider(new ObjectMapper());
+            String protocol = globalConf.getString(McpConstant.SETTINGS_MCP_PROTOCOL, "streamable");
             McpSchema.ServerCapabilities.ToolCapabilities toolCapabilities =
                     new McpSchema.ServerCapabilities.ToolCapabilities(true);
             McpSchema.ServerCapabilities serverCapabilities =
                     new McpSchema.ServerCapabilities(null, null, null, null, null, toolCapabilities);
 
-            mcpAsyncServer = McpServer.async(dubboMcpSseTransportProvider)
-                    .capabilities(serverCapabilities)
-                    .build();
+            if ("streamable".equals(protocol)) {
+                dubboMcpStreamableTransportProvider = new DubboMcpStreamableTransportProvider(new ObjectMapper());
+                mcpAsyncServer = McpServer.async(getDubboMcpStreamableTransportProvider())
+                        .capabilities(serverCapabilities)
+                        .build();
+            } else if ("sse".equals(protocol)) {
+                dubboMcpSseTransportProvider = new DubboMcpSseTransportProvider(new ObjectMapper());
+                mcpAsyncServer = McpServer.async(getDubboMcpSseTransportProvider())
+                        .capabilities(serverCapabilities)
+                        .build();
+            } else {
+                logger.error(LoggerCodeConstants.MCP_FAILED_START_SERVER, "", "", "not support protocol " + protocol);
+            }
 
             FrameworkModel frameworkModel = applicationModel.getFrameworkModel();
             DefaultOpenAPIService defaultOpenAPIService = new DefaultOpenAPIService(frameworkModel);
@@ -124,7 +135,11 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                 registeredCount += serviceRegisteredCount;
             }
 
-            exportMcpService(applicationModel);
+            if ("streamable".equals(protocol)) {
+                exportMcpStreamableService(applicationModel);
+            } else {
+                exportMcpSSEService(applicationModel);
+            }
             logger.info(
                     "MCP server initialized successfully, {} existing tools registered, dynamic registration enabled",
                     registeredCount);
@@ -156,7 +171,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     @Override
     public void onFailure(ApplicationModel applicationModel, Throwable cause) {}
 
-    private void exportMcpService(ApplicationModel applicationModel) {
+    private void exportMcpSSEService(ApplicationModel applicationModel) {
         McpSseServiceImpl mcpSseServiceImpl =
                 applicationModel.getBeanFactory().getOrRegisterBean(McpSseServiceImpl.class);
 
@@ -166,7 +181,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                 .getBean(FrameworkExecutorRepository.class)
                 .getInternalServiceExecutor();
 
-        this.serviceConfig = InternalServiceConfigBuilder.<McpSseService>newBuilder(applicationModel)
+        this.sseServiceConfig = InternalServiceConfigBuilder.<McpSseService>newBuilder(applicationModel)
                 .interfaceClass(McpSseService.class)
                 .protocol(CommonConstants.TRIPLE, McpConstant.MCP_SERVICE_PROTOCOL)
                 .port(getRegisterPort(), String.valueOf(McpConstant.MCP_SERVICE_PORT))
@@ -175,8 +190,31 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                 .ref(mcpSseServiceImpl)
                 .version(V1)
                 .build();
-        serviceConfig.export();
-        logger.info("MCP service exported on: {}", serviceConfig.getExportedUrls());
+        sseServiceConfig.export();
+        logger.info("MCP service exported on: {}", sseServiceConfig.getExportedUrls());
+    }
+
+    private void exportMcpStreamableService(ApplicationModel applicationModel) {
+        McpStreamableServiceImpl mcpStreamableServiceImpl =
+                applicationModel.getBeanFactory().getOrRegisterBean(McpStreamableServiceImpl.class);
+
+        ExecutorService internalServiceExecutor = applicationModel
+                .getFrameworkModel()
+                .getBeanFactory()
+                .getBean(FrameworkExecutorRepository.class)
+                .getInternalServiceExecutor();
+
+        this.streamableServiceConfig = InternalServiceConfigBuilder.<McpStreamableService>newBuilder(applicationModel)
+                .interfaceClass(McpStreamableService.class)
+                .protocol(CommonConstants.TRIPLE, McpConstant.MCP_SERVICE_PROTOCOL)
+                .port(getRegisterPort(), String.valueOf(McpConstant.MCP_SERVICE_PORT))
+                .registryId("internal-mcp-registry")
+                .executor(internalServiceExecutor)
+                .ref(mcpStreamableServiceImpl)
+                .version(V1)
+                .build();
+        streamableServiceConfig.export();
+        logger.info("MCP service exported on: {}", streamableServiceConfig.getExportedUrls());
     }
 
     /**
