@@ -103,7 +103,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 .then();
     }
 
-    public void handleRequest(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    public void handleRequest(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
 
@@ -128,7 +128,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
         }
     }
 
-    private void handleGet(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    private void handleGet(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
 
@@ -183,7 +183,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
         session.sendNotification("tools").subscribe();
     }
 
-    private void handlePost(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    private void handlePost(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
 
@@ -243,9 +243,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                             McpSchema.JSONRPC_VERSION, ((McpSchema.JSONRPCRequest) message).id(), initResult, null));
 
                     if (responseObserver != null) {
-                        responseObserver.onNext(ServerSentEvent.<String>builder()
+                        responseObserver.onNext(ServerSentEvent.<byte[]>builder()
                                 .event("response")
-                                .data(jsonResponse)
+                                .data(jsonResponse.getBytes(StandardCharsets.UTF_8))
                                 .build());
                         responseObserver.onCompleted();
                     }
@@ -309,9 +309,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 session.accept((McpSchema.JSONRPCResponse) message).block();
                 response.setStatus(HttpStatus.ACCEPTED.getCode());
                 if (responseObserver != null) {
-                    responseObserver.onNext(ServerSentEvent.<String>builder()
+                    responseObserver.onNext(ServerSentEvent.<byte[]>builder()
                             .event("response")
-                            .data("{\"status\":\"accepted\"}")
+                            .data("{\"status\":\"accepted\"}".getBytes(StandardCharsets.UTF_8))
                             .build());
                     responseObserver.onCompleted();
                 }
@@ -319,9 +319,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 session.accept((McpSchema.JSONRPCNotification) message).block();
                 response.setStatus(HttpStatus.ACCEPTED.getCode());
                 if (responseObserver != null) {
-                    responseObserver.onNext(ServerSentEvent.<String>builder()
+                    responseObserver.onNext(ServerSentEvent.<byte[]>builder()
                             .event("response")
-                            .data("{\"status\":\"accepted\"}")
+                            .data("{\"status\":\"accepted\"}".getBytes(StandardCharsets.UTF_8))
                             .build());
                     responseObserver.onCompleted();
                 }
@@ -375,7 +375,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
         }
     }
 
-    private void handleDelete(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    private void handleDelete(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
 
@@ -408,9 +408,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
             sessions.remove(sessionId);
             response.setStatus(HttpStatus.OK.getCode());
             if (responseObserver != null) {
-                responseObserver.onNext(ServerSentEvent.<String>builder()
+                responseObserver.onNext(ServerSentEvent.<byte[]>builder()
                         .event("response")
-                        .data("{\"status\":\"deleted\"}")
+                        .data("{\"status\":\"deleted\"}".getBytes(StandardCharsets.UTF_8))
                         .build());
                 responseObserver.onCompleted();
             }
@@ -436,10 +436,10 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
         private final ObjectMapper JSON;
 
-        private final StreamObserver<ServerSentEvent<String>> responseObserver;
+        private final StreamObserver<ServerSentEvent<byte[]>> responseObserver;
 
         public DubboMcpSessionTransport(
-                StreamObserver<ServerSentEvent<String>> responseObserver, ObjectMapper objectMapper) {
+                StreamObserver<ServerSentEvent<byte[]>> responseObserver, ObjectMapper objectMapper) {
             this.responseObserver = responseObserver;
             this.JSON = objectMapper;
         }
@@ -462,9 +462,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 try {
                     if (responseObserver != null) {
                         String jsonText = JSON.writeValueAsString(message);
-                        responseObserver.onNext(ServerSentEvent.<String>builder()
+                        responseObserver.onNext(ServerSentEvent.<byte[]>builder()
                                 .event("message")
-                                .data(jsonText)
+                                .data(jsonText.getBytes(StandardCharsets.UTF_8))
                                 .build());
                     }
                 } catch (Exception e) {
@@ -479,9 +479,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
                 try {
                     if (responseObserver != null) {
                         String jsonText = JSON.writeValueAsString(message);
-                        ServerSentEvent<String> event = ServerSentEvent.<String>builder()
+                        ServerSentEvent<byte[]> event = ServerSentEvent.<byte[]>builder()
                                 .event("message")
-                                .data(jsonText)
+                                .data(jsonText.getBytes(StandardCharsets.UTF_8))
                                 .id(messageId)
                                 .build();
                         responseObserver.onNext(event);

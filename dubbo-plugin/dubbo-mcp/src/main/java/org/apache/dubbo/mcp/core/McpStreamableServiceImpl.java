@@ -26,7 +26,7 @@ public class McpStreamableServiceImpl implements McpStreamableService, Disposabl
     private final DubboMcpStreamableTransportProvider transportProvider = getTransportProvider();
 
     @Override
-    public void streamable(StreamObserver<ServerSentEvent<String>> responseObserver) {
+    public void streamable(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {
         transportProvider.handleRequest(responseObserver);
     }
 

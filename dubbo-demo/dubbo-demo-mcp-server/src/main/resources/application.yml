@@ -31,4 +31,6 @@ dubbo:
           enabled: true
         mcp:
           enabled: true
+          protocol: streamable
+
 

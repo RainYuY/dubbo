@@ -26,5 +26,5 @@ import static org.apache.dubbo.mcp.McpConstant.SETTINGS_MCP_PATHS_MESSAGE;
 public interface McpStreamableService {
 
     @Mapping(value = "//${" + SETTINGS_MCP_PATHS_MESSAGE + ":/mcp/streamable/message}")
-    void streamable(StreamObserver<ServerSentEvent<String>> responseObserver);
+    void streamable(StreamObserver<ServerSentEvent<byte[]>> responseObserver);
 }
