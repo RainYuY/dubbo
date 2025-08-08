@@ -224,8 +224,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
                 // Create new session
                 McpSchema.InitializeRequest initializeRequest = objectMapper.convertValue(
-                        ((McpSchema.JSONRPCRequest) message).params(),
-                        new TypeReference<McpSchema.InitializeRequest>() {});
+                        ((McpSchema.JSONRPCRequest) message).params(), new TypeReference<>() {});
 
                 McpStreamableServerSession.McpStreamableServerSessionInit init =
                         sessionFactory.startSession(initializeRequest);
@@ -244,7 +243,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
                     if (responseObserver != null) {
                         responseObserver.onNext(ServerSentEvent.<byte[]>builder()
-                                .event("response")
+                                .event("message")
                                 .data(jsonResponse.getBytes(StandardCharsets.UTF_8))
                                 .build());
                         responseObserver.onCompleted();
