@@ -202,7 +202,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     }
 
     @Parameter(attribute = false, key = "mcp.enabled")
-    public boolean getMcpEnabled() {
+    public boolean isMcpEnabled() {
         return mcpEnabled;
     }
 
