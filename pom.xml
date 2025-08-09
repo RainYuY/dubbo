@@ -968,6 +968,15 @@
       </modules>
     </profile>
     <profile>
+      <id>mcp-demo</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <modules>
+        <module>dubbo-demo/dubbo-demo-mcp-server</module>
+      </modules>
+    </profile>
+    <profile>
       <id>loom</id>
       <activation>
         <jdk>[21,)</jdk>
