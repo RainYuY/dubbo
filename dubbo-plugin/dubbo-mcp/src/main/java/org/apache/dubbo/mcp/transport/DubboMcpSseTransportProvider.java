@@ -21,6 +21,7 @@ import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.common.utils.IOUtils;
+import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
@@ -39,7 +40,6 @@ import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerSession;
 import io.modelcontextprotocol.spec.McpServerTransport;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
-import io.netty.util.internal.StringUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -115,7 +115,7 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
         HttpRequest request = RpcContext.getServiceContext().getRequest(HttpRequest.class);
         String sessionId = request.parameter("sessionId");
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
-        if (StringUtil.isNullOrEmpty(sessionId)) {
+        if (StringUtils.isBlank(sessionId)) {
             throw HttpResult.of(HttpStatus.BAD_REQUEST, new McpError("Session ID missing in message endpoint"))
                     .toPayload();
         }
