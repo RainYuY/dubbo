@@ -23,10 +23,17 @@ import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 
 public class McpStreamableServiceImpl implements McpStreamableService, Disposable {
 
-    private final DubboMcpStreamableTransportProvider transportProvider = getTransportProvider();
+    private volatile DubboMcpStreamableTransportProvider transportProvider = null;
 
     @Override
     public void streamable(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {
+        if (transportProvider == null) {
+            synchronized (this) {
+                if (transportProvider == null) {
+                    transportProvider = getTransportProvider();
+                }
+            }
+        }
         transportProvider.handleRequest(responseObserver);
     }
 

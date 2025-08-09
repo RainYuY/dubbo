@@ -23,12 +23,16 @@ import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 
 public class McpSseServiceImpl implements McpSseService, Disposable {
 
-    private DubboMcpSseTransportProvider transportProvider = getTransportProvider();
+    private volatile DubboMcpSseTransportProvider transportProvider = null;
 
     @Override
     public void get(StreamObserver<ServerSentEvent<String>> responseObserver) {
         if (transportProvider == null) {
-            transportProvider = getTransportProvider();
+            synchronized (this) {
+                if (transportProvider == null) {
+                    transportProvider = getTransportProvider();
+                }
+            }
         }
         transportProvider.handleRequest(responseObserver);
     }
@@ -36,7 +40,11 @@ public class McpSseServiceImpl implements McpSseService, Disposable {
     @Override
     public void post() {
         if (transportProvider == null) {
-            transportProvider = getTransportProvider();
+            synchronized (this) {
+                if (transportProvider == null) {
+                    transportProvider = getTransportProvider();
+                }
+            }
         }
         transportProvider.handleRequest(null);
     }
