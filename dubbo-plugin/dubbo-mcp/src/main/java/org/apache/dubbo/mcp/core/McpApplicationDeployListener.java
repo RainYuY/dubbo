@@ -112,7 +112,8 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
                         .capabilities(serverCapabilities)
                         .build();
             } else {
-                logger.error(LoggerCodeConstants.MCP_FAILED_START_SERVER, "", "", "not support protocol " + protocol);
+                logger.error(
+                        LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION, "", "", "not support protocol " + protocol);
             }
 
             FrameworkModel frameworkModel = applicationModel.getFrameworkModel();

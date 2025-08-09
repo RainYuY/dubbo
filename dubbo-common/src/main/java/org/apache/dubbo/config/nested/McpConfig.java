@@ -42,6 +42,11 @@ public class McpConfig implements Serializable {
     @Nested
     private MCPPath path;
 
+    /**
+     * streamable or sse
+     */
+    private String protocol;
+
     public Boolean getEnabled() {
         return enabled;
     }
@@ -64,6 +69,14 @@ public class McpConfig implements Serializable {
 
     public void setPath(MCPPath path) {
         this.path = path;
+    }
+
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public void setProtocol(String protocol) {
+        this.protocol = protocol;
     }
 
     public static class MCPPath implements Serializable {
