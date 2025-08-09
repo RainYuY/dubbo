@@ -164,7 +164,9 @@ public abstract class AbstractServerHttpChannelObserver<H extends HttpChannel> i
         HttpResponse response = RpcContext.getServiceContext().getResponse(HttpResponse.class);
         HttpMetadata metadata = encodeHttpMetadata(message == null);
         HttpHeaders headers = metadata.headers();
-        headers.add(response.headers());
+        if (response != null && response.headers() != null) {
+            headers.add(response.headers());
+        }
         headers.set(HttpHeaderNames.STATUS.getKey(), HttpUtils.toStatusString(statusCode));
         if (message != null) {
             headers.set(HttpHeaderNames.CONTENT_TYPE.getKey(), responseEncoder.contentType());
