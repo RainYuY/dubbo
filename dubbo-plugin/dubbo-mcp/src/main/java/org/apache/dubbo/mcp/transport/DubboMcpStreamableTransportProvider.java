@@ -66,6 +66,9 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
     public static final String SESSION_ID_HEADER = "mcp-session-id";
 
+    /**
+     * TODO: This design is suboptimal. A mechanism should be implemented to remove the session object upon connection closure or timeout.
+     */
     private final ExpiringMap<String, McpStreamableServerSession> sessions = new ExpiringMap<>(30 * 60, 30);
 
     public DubboMcpStreamableTransportProvider(ObjectMapper objectMapper) {
