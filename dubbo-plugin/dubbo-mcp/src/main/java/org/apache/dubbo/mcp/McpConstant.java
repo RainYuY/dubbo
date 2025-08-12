@@ -25,11 +25,14 @@ public interface McpConstant {
     String SETTINGS_MCP_ENABLE = "dubbo.protocol.triple.rest.mcp.enabled";
     String SETTINGS_MCP_PORT = "dubbo.protocol.triple.rest.mcp.port";
     String SETTINGS_MCP_PROTOCOL = "dubbo.protocol.triple.rest.mcp.protocol";
+    String SETTINGS_MCP_SESSION_TIMEOUT = "dubbo.protocol.triple.rest.mcp.session-timeout";
     String SETTINGS_MCP_DEFAULT_ENABLED = "dubbo.protocol.triple.rest.mcp.default.enabled";
     String SETTINGS_MCP_INCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.include-patterns";
     String SETTINGS_MCP_EXCLUDE_PATTERNS = "dubbo.protocol.triple.rest.mcp.exclude-patterns";
     String SETTINGS_MCP_PATHS_SSE = "dubbo.protocol.triple.rest.mcp.path.sse";
     String SETTINGS_MCP_PATHS_MESSAGE = "dubbo.protocol.triple.rest.mcp.path.message";
+
+    Integer DEFAULT_SESSION_TIMEOUT = 60;
 
     // MCP service control-related configuration
     String SETTINGS_MCP_SERVICE_PREFIX = "dubbo.protocol.triple.rest.mcp.service";

@@ -55,6 +55,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     private static final ErrorTypeAwareLogger logger =
             LoggerFactory.getErrorTypeAwareLogger(McpApplicationDeployListener.class);
     private DubboServiceToolRegistry toolRegistry;
+
     private boolean mcpEnable = true;
 
     private volatile ServiceConfig<McpSseService> sseServiceConfig;
@@ -101,13 +102,16 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
             McpSchema.ServerCapabilities serverCapabilities =
                     new McpSchema.ServerCapabilities(null, null, null, null, null, toolCapabilities);
 
+            Integer sessionTimeout =
+                    globalConf.getInt(McpConstant.SETTINGS_MCP_SESSION_TIMEOUT, McpConstant.DEFAULT_SESSION_TIMEOUT);
             if ("streamable".equals(protocol)) {
-                dubboMcpStreamableTransportProvider = new DubboMcpStreamableTransportProvider(new ObjectMapper());
+                dubboMcpStreamableTransportProvider =
+                        new DubboMcpStreamableTransportProvider(new ObjectMapper(), sessionTimeout);
                 mcpAsyncServer = McpServer.async(getDubboMcpStreamableTransportProvider())
                         .capabilities(serverCapabilities)
                         .build();
             } else if ("sse".equals(protocol)) {
-                dubboMcpSseTransportProvider = new DubboMcpSseTransportProvider(new ObjectMapper());
+                dubboMcpSseTransportProvider = new DubboMcpSseTransportProvider(new ObjectMapper(), sessionTimeout);
                 mcpAsyncServer = McpServer.async(getDubboMcpSseTransportProvider())
                         .capabilities(serverCapabilities)
                         .build();

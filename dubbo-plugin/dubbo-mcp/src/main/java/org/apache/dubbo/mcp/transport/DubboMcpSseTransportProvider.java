@@ -64,11 +64,26 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
 
     private final ObjectMapper objectMapper;
 
-    private final ExpiringMap<String, McpServerSession> sessions = new ExpiringMap<>(30 * 60, 30);
+    /**
+     * session cache, default expire time is 60 seconds
+     */
+    private final ExpiringMap<String, McpServerSession> sessions;
 
-    public DubboMcpSseTransportProvider(ObjectMapper objectMapper) {
+    public DubboMcpSseTransportProvider(ObjectMapper objectMapper, Integer expireSeconds) {
+        if (expireSeconds != null) {
+            if (expireSeconds < 60) {
+                expireSeconds = 60;
+            }
+        } else {
+            expireSeconds = 60;
+        }
+        sessions = new ExpiringMap<>(expireSeconds, 30);
         this.objectMapper = objectMapper;
         sessions.getExpireThread().startExpiryIfNotStarted();
+    }
+
+    public DubboMcpSseTransportProvider(ObjectMapper objectMapper) {
+        this(objectMapper, 60);
     }
 
     @Override

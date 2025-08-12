@@ -23,6 +23,7 @@ import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.IOUtils;
 import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.mcp.McpConstant;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
@@ -69,9 +70,22 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
     /**
      * TODO: This design is suboptimal. A mechanism should be implemented to remove the session object upon connection closure or timeout.
      */
-    private final ExpiringMap<String, McpStreamableServerSession> sessions = new ExpiringMap<>(30 * 60, 30);
+    private final ExpiringMap<String, McpStreamableServerSession> sessions;
 
     public DubboMcpStreamableTransportProvider(ObjectMapper objectMapper) {
+        this(objectMapper, McpConstant.DEFAULT_SESSION_TIMEOUT);
+    }
+
+    public DubboMcpStreamableTransportProvider(ObjectMapper objectMapper, Integer expireSeconds) {
+        // Minimum expiration time is 60 seconds
+        if (expireSeconds != null) {
+            if (expireSeconds < 60) {
+                expireSeconds = 60;
+            }
+        } else {
+            expireSeconds = 60;
+        }
+        sessions = new ExpiringMap<>(expireSeconds, 30);
         this.objectMapper = objectMapper;
         sessions.getExpireThread().startExpiryIfNotStarted();
     }

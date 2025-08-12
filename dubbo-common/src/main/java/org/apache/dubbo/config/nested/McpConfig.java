@@ -47,6 +47,12 @@ public class McpConfig implements Serializable {
      */
     private String protocol;
 
+    /**
+     * Session timeout in milliseconds for long connection
+     * unit: seconds
+     */
+    private Integer sessionTimeout;
+
     public Boolean isEnabled() {
         return enabled;
     }
@@ -77,6 +83,14 @@ public class McpConfig implements Serializable {
 
     public void setProtocol(String protocol) {
         this.protocol = protocol;
+    }
+
+    public Integer getSessionTimeout() {
+        return sessionTimeout;
+    }
+
+    public void setSessionTimeout(Integer sessionTimeout) {
+        this.sessionTimeout = sessionTimeout;
     }
 
     public static class MCPPath implements Serializable {
