@@ -165,6 +165,13 @@ public class McpServiceFilter {
                 }
             } catch (NoSuchMethodException e) {
                 // Method not found in implementation class
+                logger.error(
+                        LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                        "",
+                        "",
+                        "Method not found in implementation class: " + methodName + " with parameters: "
+                                + Arrays.toString(paramTypes),
+                        e);
             }
         }
 

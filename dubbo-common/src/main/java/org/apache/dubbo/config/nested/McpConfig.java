@@ -47,7 +47,7 @@ public class McpConfig implements Serializable {
      */
     private String protocol;
 
-    public Boolean getEnabled() {
+    public Boolean isEnabled() {
         return enabled;
     }
 

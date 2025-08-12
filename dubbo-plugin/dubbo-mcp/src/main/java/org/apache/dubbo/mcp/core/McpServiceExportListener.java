@@ -132,7 +132,12 @@ public class McpServiceExportListener implements ServiceListener {
             ApplicationModel applicationModel = sc.getScopeModel().getApplicationModel();
             return applicationModel.getBeanFactory().getBean(DubboServiceToolRegistry.class);
         } catch (Exception e) {
-            logger.debug("Failed to get DubboServiceToolRegistry from application context: {}", e.getMessage());
+            logger.warn(
+                    LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION,
+                    "",
+                    "",
+                    "Failed to get DubboServiceToolRegistry from application context",
+                    e);
             return null;
         }
     }
