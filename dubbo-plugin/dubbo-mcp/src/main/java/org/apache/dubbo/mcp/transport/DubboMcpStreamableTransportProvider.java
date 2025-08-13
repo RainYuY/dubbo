@@ -196,8 +196,84 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
             return;
         }
 
-        // Send initial notification
-        session.sendNotification("tools").subscribe();
+        // Check if this is a replay request
+        String lastEventId = request.header("Last-Event-ID");
+        if (StringUtils.isNotBlank(lastEventId)) {
+            // Handle replay request by calling session.replay()
+            try {
+                session.replay(lastEventId)
+                        .subscribe(
+                                message -> {
+                                    if (responseObserver != null) {
+                                        try {
+                                            String jsonData = objectMapper.writeValueAsString(message);
+                                            responseObserver.onNext(ServerSentEvent.<byte[]>builder()
+                                                    .event("message")
+                                                    .data(jsonData.getBytes(StandardCharsets.UTF_8))
+                                                    .build());
+                                        } catch (Exception e) {
+                                            logger.error(
+                                                    COMMON_UNEXPECTED_EXCEPTION,
+                                                    "",
+                                                    "",
+                                                    String.format(
+                                                            "Failed to serialize replay message for session %s: %s",
+                                                            sessionId, e.getMessage()),
+                                                    e);
+                                        }
+                                    }
+                                },
+                                error -> {
+                                    logger.error(
+                                            COMMON_UNEXPECTED_EXCEPTION,
+                                            "",
+                                            "",
+                                            String.format(
+                                                    "Failed to replay messages for session %s with lastEventId %s: %s",
+                                                    sessionId, lastEventId, error.getMessage()),
+                                            error);
+                                    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
+                                    response.setBody(new McpError("Failed to replay messages: " + error.getMessage())
+                                            .getJsonRpcError());
+                                    if (responseObserver != null) {
+                                        responseObserver.onError(HttpResult.builder()
+                                                .status(HttpStatus.INTERNAL_SERVER_ERROR.getCode())
+                                                .body(new McpError("Failed to replay messages: " + error.getMessage())
+                                                        .getJsonRpcError())
+                                                .build()
+                                                .toPayload());
+                                        responseObserver.onCompleted();
+                                    }
+                                },
+                                () -> {
+                                    if (responseObserver != null) {
+                                        responseObserver.onCompleted();
+                                    }
+                                });
+            } catch (Exception e) {
+                logger.error(
+                        COMMON_UNEXPECTED_EXCEPTION,
+                        "",
+                        "",
+                        String.format(
+                                "Failed to handle replay for session %s with lastEventId %s: %s",
+                                sessionId, lastEventId, e.getMessage()),
+                        e);
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
+                response.setBody(new McpError("Failed to handle replay: " + e.getMessage()).getJsonRpcError());
+                if (responseObserver != null) {
+                    responseObserver.onError(HttpResult.builder()
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.getCode())
+                            .body(new McpError("Failed to handle replay: " + e.getMessage()).getJsonRpcError())
+                            .build()
+                            .toPayload());
+                    responseObserver.onCompleted();
+                }
+            }
+        } else {
+            // Send initial notification for new connection
+            session.sendNotification("tools").subscribe();
+        }
     }
 
     private void handlePost(StreamObserver<ServerSentEvent<byte[]>> responseObserver) {

@@ -26,8 +26,10 @@ import org.apache.dubbo.rpc.RpcContext;
 import org.apache.dubbo.rpc.RpcServiceContext;
 
 import java.io.ByteArrayInputStream;
+import java.util.Collections;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpStreamableServerSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +62,9 @@ class DubboMcpStreamableTransportProviderTest {
 
     @Mock
     private RpcServiceContext rpcServiceContext;
+
+    @Mock
+    private McpStreamableServerSession mockSession;
 
     private MockedStatic<RpcContext> rpcContextMockedStatic;
 
@@ -159,6 +164,44 @@ class DubboMcpStreamableTransportProviderTest {
         verify(httpRequest, times(1)).method();
         verify(httpResponse).setStatus(HttpStatus.NOT_FOUND.getCode());
         verify(responseObserver).onError(any());
+        verify(responseObserver).onCompleted();
+    }
+
+    @Test
+    void handleGetWithReplayRequestCallsSessionReplay() throws Exception {
+        // Create a transport provider subclass for testing to access private methods and fields
+        DubboMcpStreamableTransportProvider transportProviderUnderTest =
+                new DubboMcpStreamableTransportProvider(objectMapper);
+        transportProviderUnderTest.setSessionFactory(sessionFactory);
+
+        // Use reflection to put mockSession into the sessions map
+        java.lang.reflect.Field sessionsField = DubboMcpStreamableTransportProvider.class.getDeclaredField("sessions");
+        sessionsField.setAccessible(true);
+        Object sessionsMap = sessionsField.get(transportProviderUnderTest);
+
+        // Use reflection to call the put method
+        java.lang.reflect.Method putMethod = sessionsMap.getClass().getMethod("put", Object.class, Object.class);
+        putMethod.invoke(sessionsMap, "test-session-id", mockSession);
+
+        // Set up mock behavior
+        when(httpRequest.method()).thenReturn(HttpMethods.GET.name());
+        when(httpRequest.accept()).thenReturn("text/event-stream");
+        when(httpRequest.header(DubboMcpStreamableTransportProvider.SESSION_ID_HEADER))
+                .thenReturn("test-session-id");
+        when(httpRequest.header("Last-Event-ID")).thenReturn("12345");
+
+        // Mock the replay method to return a Flux that emits a test message
+        McpSchema.JSONRPCNotification testNotification =
+                new McpSchema.JSONRPCNotification("2.0", "test_method", Collections.singletonMap("key", "value"));
+
+        when(mockSession.replay("12345")).thenReturn(reactor.core.publisher.Flux.just(testNotification));
+
+        transportProviderUnderTest.handleRequest(responseObserver);
+
+        // Verify that the replay method is called
+        verify(mockSession).replay("12345");
+        // Verify that the message is sent
+        verify(responseObserver).onNext(any());
         verify(responseObserver).onCompleted();
     }
 
