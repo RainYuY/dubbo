@@ -53,7 +53,7 @@ public class McpConfig implements Serializable {
      */
     private Integer sessionTimeout;
 
-    public Boolean isEnabled() {
+    public Boolean getEnabled() {
         return enabled;
     }
 
