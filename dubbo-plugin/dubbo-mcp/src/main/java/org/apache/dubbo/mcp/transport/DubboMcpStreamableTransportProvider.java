@@ -67,6 +67,8 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
 
     public static final String SESSION_ID_HEADER = "mcp-session-id";
 
+    private static final String LAST_EVENT_ID_HEADER = "Last-Event-ID";
+
     /**
      * TODO: This design is suboptimal. A mechanism should be implemented to remove the session object upon connection closure or timeout.
      */
@@ -197,7 +199,7 @@ public class DubboMcpStreamableTransportProvider implements McpStreamableServerT
         }
 
         // Check if this is a replay request
-        String lastEventId = request.header("Last-Event-ID");
+        String lastEventId = request.header(LAST_EVENT_ID_HEADER);
         if (StringUtils.isNotBlank(lastEventId)) {
             // Handle replay request by calling session.replay()
             try {
