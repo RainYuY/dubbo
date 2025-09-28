@@ -57,6 +57,7 @@ dubbo-metrics-registry
 dubbo-metrics-config-center
 dubbo-metrics-netty
 dubbo-metrics-event
+dubbo-mutiny
 dubbo-native
 dubbo-parent
 dubbo-plugin
