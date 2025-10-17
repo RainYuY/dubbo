@@ -85,7 +85,7 @@ public class McpApplicationDeployListener implements ApplicationDeployListener {
     @Override
     public void onStarted(ApplicationModel applicationModel) {
         Configuration globalConf = ConfigurationUtils.getGlobalConfiguration(applicationModel);
-        mcpEnable = globalConf.getBoolean(McpConstant.SETTINGS_MCP_ENABLE, true);
+        mcpEnable = globalConf.getBoolean(McpConstant.SETTINGS_MCP_ENABLE, false);
         if (!mcpEnable) {
             logger.info("MCP service is disabled, skipping initialization");
             return;
