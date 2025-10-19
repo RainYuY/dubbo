@@ -165,7 +165,7 @@ public abstract class AbstractServerHttpChannelObserver<H extends HttpChannel> i
         HttpMetadata metadata = encodeHttpMetadata(message == null);
         HttpHeaders headers = metadata.headers();
         if (response != null && response.headers() != null) {
-            headers.add(response.headers());
+            headers.set(response.headers());
         }
         headers.set(HttpHeaderNames.STATUS.getKey(), HttpUtils.toStatusString(statusCode));
         if (message != null) {
