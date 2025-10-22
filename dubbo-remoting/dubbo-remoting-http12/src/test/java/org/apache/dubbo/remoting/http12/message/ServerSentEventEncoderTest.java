@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* Mention:-I have
-used AI to write this unit test for my thought change/contri,
-if this is not allowed,
-I will close the pull request <--- This comment will be later removed, if the pr approved and merged
-*/
 package org.apache.dubbo.remoting.http12.message;
 
 import org.apache.dubbo.remoting.http12.exception.EncodeException;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 class ServerSentEventEncoderTest {
 
@@ -47,10 +43,14 @@ class ServerSentEventEncoderTest {
         }
 
         @Override
-        public MediaType mediaType() { return MediaType.APPLICATION_JSON; }
+        public MediaType mediaType() {
+            return MediaType.APPLICATION_JSON;
+        }
 
         @Override
-        public boolean supports(String mediaType) { return true; }
+        public boolean supports(String mediaType) {
+            return true;
+        }
     }
 
     @Test
@@ -64,7 +64,13 @@ class ServerSentEventEncoderTest {
     void shouldEncodeServerSentEventFormat() {
         ServerSentEventEncoder sse = new ServerSentEventEncoder(new DummyJsonEncoder());
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        sse.encode(bos, ServerSentEvent.builder().event("message").data("{\"a\":1}").id("1").build(),
+        sse.encode(
+                bos,
+                ServerSentEvent.builder()
+                        .event("message")
+                        .data("{\"a\":1}")
+                        .id("1")
+                        .build(),
                 StandardCharsets.UTF_8);
         String text = bos.toString(StandardCharsets.UTF_8);
         Assertions.assertTrue(text.contains("id:1\n"));

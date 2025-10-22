@@ -93,7 +93,7 @@ public final class ServerSentEventEncoder implements HttpMessageEncoder {
 
     @Override
     public String contentType() {
-        //An idea:sse use text/event-stream regardless of the underlying data encoder...
+        // An idea:sse use text/event-stream regardless of the underlying data encoder...
         return MediaType.TEXT_EVENT_STREAM.getName();
     }
 

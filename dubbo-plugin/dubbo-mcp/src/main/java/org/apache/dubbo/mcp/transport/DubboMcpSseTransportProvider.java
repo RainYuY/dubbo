@@ -163,9 +163,9 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
                 new DubboMcpSessionTransport(responseObserver, objectMapper);
         McpServerSession mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
         sessions.put(mcpServerSession.getId(), mcpServerSession);
-        Configuration conf=ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
-        String messagePath=conf.getString(McpConstant.SETTINGS_MCP_PATHS_MESSAGE,"/mcp/message");
-        sendEvent(responseObserver,ENDPOINT_EVENT_TYPE,messagePath+ "?sessionId="+ mcpServerSession.getId());
+        Configuration conf = ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
+        String messagePath = conf.getString(McpConstant.SETTINGS_MCP_PATHS_MESSAGE, "/mcp/message");
+        sendEvent(responseObserver, ENDPOINT_EVENT_TYPE, messagePath + "?sessionId=" + mcpServerSession.getId());
     }
 
     private void refreshSessionExpire(McpServerSession session) {
