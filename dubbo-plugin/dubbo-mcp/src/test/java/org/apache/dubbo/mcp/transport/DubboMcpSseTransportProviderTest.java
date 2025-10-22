@@ -43,6 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -99,7 +100,11 @@ class DubboMcpSseTransportProviderTest {
         transportProvider.handleRequest(responseObserver);
 
         verify(httpRequest, times(1)).method();
-        verify(responseObserver, times(1)).onNext(any(ServerSentEvent.class));
+        ArgumentCaptor<ServerSentEvent> captor=ArgumentCaptor.forClass(ServerSentEvent.class);
+        verify(responseObserver, times(1)).onNext(captor.capture());
+        ServerSentEvent evt=captor.getValue();
+        Assertions.assertEquals("endpoint",evt.getEvent());
+        Assertions.assertTrue(((String) evt.getData()).startsWith("/mcp/message?sessionId="));
     }
 
     @Test

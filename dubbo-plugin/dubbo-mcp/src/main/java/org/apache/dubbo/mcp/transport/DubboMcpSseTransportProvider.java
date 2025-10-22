@@ -17,11 +17,14 @@
 package org.apache.dubbo.mcp.transport;
 
 import org.apache.dubbo.cache.support.expiring.ExpiringMap;
+import org.apache.dubbo.common.config.Configuration;
+import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.common.utils.IOUtils;
 import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.mcp.McpConstant;
 import org.apache.dubbo.remoting.http12.HttpMethods;
 import org.apache.dubbo.remoting.http12.HttpRequest;
 import org.apache.dubbo.remoting.http12.HttpResponse;
@@ -29,6 +32,7 @@ import org.apache.dubbo.remoting.http12.HttpResult;
 import org.apache.dubbo.remoting.http12.HttpStatus;
 import org.apache.dubbo.remoting.http12.message.ServerSentEvent;
 import org.apache.dubbo.rpc.RpcContext;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -159,7 +163,9 @@ public class DubboMcpSseTransportProvider implements McpServerTransportProvider 
                 new DubboMcpSessionTransport(responseObserver, objectMapper);
         McpServerSession mcpServerSession = sessionFactory.create(dubboMcpSessionTransport);
         sessions.put(mcpServerSession.getId(), mcpServerSession);
-        sendEvent(responseObserver, ENDPOINT_EVENT_TYPE, "/mcp/message" + "?sessionId=" + mcpServerSession.getId());
+        Configuration conf=ConfigurationUtils.getGlobalConfiguration(ApplicationModel.defaultModel());
+        String messagePath=conf.getString(McpConstant.SETTINGS_MCP_PATHS_MESSAGE,"/mcp/message");
+        sendEvent(responseObserver,ENDPOINT_EVENT_TYPE,messagePath+ "?sessionId="+ mcpServerSession.getId());
     }
 
     private void refreshSessionExpire(McpServerSession session) {
