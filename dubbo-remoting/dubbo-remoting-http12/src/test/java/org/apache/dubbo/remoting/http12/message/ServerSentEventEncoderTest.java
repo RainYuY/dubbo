@@ -72,10 +72,11 @@ class ServerSentEventEncoderTest {
                         .id("1")
                         .build(),
                 StandardCharsets.UTF_8);
-        String text = bos.toString(StandardCharsets.UTF_8);
+        byte[] bytes = bos.toByteArray();
+        String text = new String(bytes, StandardCharsets.UTF_8);
         Assertions.assertTrue(text.contains("id:1\n"));
         Assertions.assertTrue(text.contains("event:message\n"));
-        Assertions.assertTrue(text.contains("data:{\\\"a\\\":1}\n"));
+        Assertions.assertTrue(text.contains("data:{\"a\":1}\n"));
         Assertions.assertTrue(text.endsWith("\n"));
     }
 }
