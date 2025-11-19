@@ -38,7 +38,7 @@ public class Gzip implements Compressor, DeCompressor {
 
     private final int maxMessageSize;
 
-    public Gzip(){
+    public Gzip() {
         Configuration conf = ConfigurationUtils.getEnvConfiguration(ApplicationModel.defaultModel());
         this.maxMessageSize = conf.getInteger(Constants.H2_SETTINGS_MAX_MESSAGE_SIZE, 50 * 1024 * 1024);
     }
@@ -89,8 +89,8 @@ public class Gzip implements Compressor, DeCompressor {
             while ((readByteNum = gzipInputStream.read(bufferArr)) >= 0) {
                 totalBytesRead += readByteNum;
                 if (totalBytesRead > maxMessageSize) {
-                    throw new RpcException("Decompressed message size " + totalBytesRead +
-                            " exceeds the maximum configured message size " + maxMessageSize);
+                    throw new RpcException("Decompressed message size " + totalBytesRead
+                            + " exceeds the maximum configured message size " + maxMessageSize);
                 }
                 byteOutStream.write(bufferArr, 0, readByteNum);
             }

@@ -46,7 +46,7 @@ public class Bzip2 implements Compressor, DeCompressor {
         return BZIP2;
     }
 
-    public Bzip2(){
+    public Bzip2() {
         Configuration conf = ConfigurationUtils.getEnvConfiguration(ApplicationModel.defaultModel());
         this.maxMessageSize = conf.getInteger(Constants.H2_SETTINGS_MAX_MESSAGE_SIZE, 50 * 1024 * 1024);
     }
@@ -95,8 +95,8 @@ public class Bzip2 implements Compressor, DeCompressor {
             while ((n = unZip.read(buffer)) >= 0) {
                 totalBytesRead += n;
                 if (totalBytesRead > maxMessageSize) {
-                    throw new RpcException("Decompressed message size " + totalBytesRead +
-                            " exceeds the maximum configured message size " + maxMessageSize);
+                    throw new RpcException("Decompressed message size " + totalBytesRead
+                            + " exceeds the maximum configured message size " + maxMessageSize);
                 }
                 out.write(buffer, 0, n);
             }

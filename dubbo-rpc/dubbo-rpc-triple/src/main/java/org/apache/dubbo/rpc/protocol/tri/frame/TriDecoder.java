@@ -18,17 +18,14 @@ package org.apache.dubbo.rpc.protocol.tri.frame;
 
 import org.apache.dubbo.common.config.Configuration;
 import org.apache.dubbo.common.config.ConfigurationUtils;
-import org.apache.dubbo.remoting.http12.exception.DecodeException;
 import org.apache.dubbo.rpc.Constants;
 import org.apache.dubbo.rpc.RpcException;
 import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.protocol.tri.compressor.DeCompressor;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
-
-import org.apache.dubbo.rpc.protocol.tri.compressor.DeCompressor;
-
 
 public class TriDecoder implements Deframer {
 
@@ -48,7 +45,6 @@ public class TriDecoder implements Deframer {
     private int requiredLength = HEADER_LENGTH;
 
     private GrpcDecodeState state = GrpcDecodeState.HEADER;
-
 
     public TriDecoder(DeCompressor decompressor, Listener listener) {
         Configuration conf = ConfigurationUtils.getEnvConfiguration(ApplicationModel.defaultModel());
@@ -138,9 +134,7 @@ public class TriDecoder implements Deframer {
             throw new RpcException("Invalid message length: " + requiredLength);
         }
         if (requiredLength > maxMessageSize) {
-            throw new RpcException(
-                    String.format("Message size %d exceeds limit %d",
-                            requiredLength, maxMessageSize));
+            throw new RpcException(String.format("Message size %d exceeds limit %d", requiredLength, maxMessageSize));
         }
 
         // Continue reading the frame body.

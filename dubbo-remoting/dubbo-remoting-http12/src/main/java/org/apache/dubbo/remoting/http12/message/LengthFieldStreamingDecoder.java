@@ -164,9 +164,7 @@ public class LengthFieldStreamingDecoder implements StreamingDecoder {
             throw new RpcException("Invalid message length: " + requiredLength);
         }
         if (requiredLength > maxMessageSize) {
-            throw new RpcException(
-                    String.format("Message size %d exceeds limit %d",
-                            requiredLength, maxMessageSize));
+            throw new RpcException(String.format("Message size %d exceeds limit %d", requiredLength, maxMessageSize));
         }
 
         // Continue reading the frame body.
