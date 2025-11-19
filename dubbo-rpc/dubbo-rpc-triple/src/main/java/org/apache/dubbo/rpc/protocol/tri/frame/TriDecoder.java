@@ -16,12 +16,19 @@
  */
 package org.apache.dubbo.rpc.protocol.tri.frame;
 
+import org.apache.dubbo.common.config.Configuration;
+import org.apache.dubbo.common.config.ConfigurationUtils;
+import org.apache.dubbo.remoting.http12.exception.DecodeException;
+import org.apache.dubbo.rpc.Constants;
 import org.apache.dubbo.rpc.RpcException;
-import org.apache.dubbo.rpc.protocol.tri.compressor.DeCompressor;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+
+import org.apache.dubbo.rpc.protocol.tri.compressor.DeCompressor;
+
 
 public class TriDecoder implements Deframer {
 
@@ -31,6 +38,7 @@ public class TriDecoder implements Deframer {
     private final CompositeByteBuf accumulate = Unpooled.compositeBuffer();
     private final Listener listener;
     private final DeCompressor decompressor;
+    private final Integer maxMessageSize;
     private boolean compressedFlag;
     private long pendingDeliveries;
     private boolean inDelivery = false;
@@ -41,7 +49,10 @@ public class TriDecoder implements Deframer {
 
     private GrpcDecodeState state = GrpcDecodeState.HEADER;
 
+
     public TriDecoder(DeCompressor decompressor, Listener listener) {
+        Configuration conf = ConfigurationUtils.getEnvConfiguration(ApplicationModel.defaultModel());
+        maxMessageSize = conf.getInteger(Constants.H2_SETTINGS_MAX_MESSAGE_SIZE, 50 * 1024 * 1024);
         this.decompressor = decompressor;
         this.listener = listener;
     }
@@ -122,6 +133,15 @@ public class TriDecoder implements Deframer {
         compressedFlag = (type & COMPRESSED_FLAG_MASK) != 0;
 
         requiredLength = accumulate.readInt();
+
+        if (requiredLength < 0) {
+            throw new RpcException("Invalid message length: " + requiredLength);
+        }
+        if (requiredLength > maxMessageSize) {
+            throw new RpcException(
+                    String.format("Message size %d exceeds limit %d",
+                            requiredLength, maxMessageSize));
+        }
 
         // Continue reading the frame body.
         state = GrpcDecodeState.PAYLOAD;
