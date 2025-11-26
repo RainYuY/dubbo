@@ -255,7 +255,13 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
                             1,
                             Collections.singletonList(registryName)),
                     () -> {
-                        registry.register(registeredProviderUrl);
+                        boolean authEnabled = Boolean.parseBoolean(
+                                registeredProviderUrl.getParameter(org.apache.dubbo.rpc.Constants.AUTH_KEY));
+                        if (authEnabled) {
+                            registry.register(registeredProviderUrl.removeParameters(USERNAME_KEY, PASSWORD_KEY));
+                        } else {
+                            registry.register(registeredProviderUrl);
+                        }
                         return null;
                     });
         } finally {
