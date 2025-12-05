@@ -33,7 +33,6 @@ public final class MethodMeta extends AnnotationSupport {
 
     private final List<Method> hierarchy;
     private final Method method;
-    private final String methodName;
     private MethodDescriptor methodDescriptor;
     private ParameterMeta[] parameters;
     private ParameterMeta returnParameter;
@@ -43,7 +42,6 @@ public final class MethodMeta extends AnnotationSupport {
         super(serviceMeta.getToolKit());
         this.hierarchy = hierarchy;
         method = initMethod(hierarchy, methodDescriptor);
-        methodName = methodDescriptor.getMethodName();
         this.methodDescriptor = methodDescriptor;
         this.serviceMeta = serviceMeta;
     }
@@ -98,7 +96,7 @@ public final class MethodMeta extends AnnotationSupport {
     }
 
     public String getMethodName() {
-        return methodName;
+        return methodDescriptor.getMethodName();
     }
 
     public MethodDescriptor getMethodDescriptor() {
