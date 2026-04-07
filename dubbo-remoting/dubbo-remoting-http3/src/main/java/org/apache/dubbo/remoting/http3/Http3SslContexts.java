@@ -78,6 +78,7 @@ public final class Http3SslContexts extends SslContext {
             throw new IllegalArgumentException("Could not find certificate file or the certificate is invalid.", t);
         }
         try {
+            builder.endpointIdentificationAlgorithm(null);
             return builder.applicationProtocols(Http3.supportedApplicationProtocols())
                     .build();
         } catch (Throwable t) {
